@@ -5,7 +5,7 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 
 const app = express();
-const port = 3000;
+const port = 8081;
 const cors = require("cors");
 app.use(cors());
 
@@ -14,7 +14,7 @@ app.use(bodyParser.json());
 const jwt = require("jsonwebtoken");
 
 mongoose
-  .connect("mongodb+srv://sujan:sujan@cluster0.a5lhovy.mongodb.net/", {
+  .connect("mongodb+srv://ericdelacruzh:E8TG7z5r68mm0X8S@cluster0.yiyau.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
@@ -75,13 +75,13 @@ const sendVerificationEmail = async (email, verificationToken) => {
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-      user: "sujananand0@gmail.com",
-      pass: "rnzcugnscqtqiefs",
+      user: "aaimadein@gmail.com",
+      pass: "c94aBkV5>hqhc|#",
     },
   });
 
   const mailOptions = {
-    from: "linkedin@gmail.com",
+    from: "aaimadein@gmail.com",
     to: email,
     subject: "Email Verification",
     text: `please click the following link to verify your email : http://localhost:3000/verify/${verificationToken}`,
