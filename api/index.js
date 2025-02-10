@@ -5,7 +5,7 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 
 const app = express();
-const port = 8081;
+const port = 3000;
 const cors = require("cors");
 app.use(cors());
 
@@ -76,7 +76,7 @@ const sendVerificationEmail = async (email, verificationToken) => {
     service: "gmail",
     auth: {
       user: "aaimadein@gmail.com",
-      pass: "c94aBkV5>hqhc|#",
+      pass: "lhih nowt yknc zwck ",
     },
   });
 

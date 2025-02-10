@@ -12,7 +12,7 @@ const ConnectionRequest = ({
   const acceptConnection = async (requestId) => {
     try {
       const response = await fetch(
-        "http://localhost:3000/connection-request/accept",
+        "http://192.168.2.34:3000/connection-request/accept",
         {
           method: "POST",
           headers: {

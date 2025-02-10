@@ -1,5 +1,5 @@
 {
-  "name": "linkedin-yt",
+  "name": "aimadeinafrica",
   "version": "1.0.0",
   "main": "expo-router/entry",
   "scripts": {
@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "1.18.2",
+    "@react-native-firebase/app": "^21.7.4",
+    "@react-native-firebase/storage": "^21.7.4",
     "axios": "^1.7.9",
     "expo": "~49.0.13",
     "expo-constants": "~14.4.2",

@@ -57,7 +57,7 @@ const index = () => {
       };
 
       const response = await axios.post(
-        "http://localhost:3000/create",
+        "http://192.168.2.34:3000/create",
         postData
       );
 

@@ -21,6 +21,9 @@ const index = () => {
   const [userId, setUserId] = useState("");
   const [user, setUser] = useState();
   const [posts, setPosts] = useState([]);
+  const router = useRouter();
+
+  // Fetch user data
   useEffect(() => {
     const fetchUser = async () => {
       const token = await AsyncStorage.getItem("authToken");
@@ -31,15 +34,17 @@ const index = () => {
 
     fetchUser();
   }, []);
+
   useEffect(() => {
     if (userId) {
       fetchUserProfile();
     }
   }, [userId]);
+
   const fetchUserProfile = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:3000/profile/${userId}`
+        `http://192.168.2.34:3000/profile/${userId}`
       );
       const userData = response.data.user;
       setUser(userData);
@@ -47,10 +52,12 @@ const index = () => {
       console.log("error fetching user profile", error);
     }
   };
+
+  // Fetch all posts
   useEffect(() => {
     const fetchAllPosts = async () => {
       try {
-        const response = await axios.get("http://localhost:3000/all");
+        const response = await axios.get("http://192.168.2.34:3000/all");
         setPosts(response.data.posts);
       } catch (error) {
         console.log("error fetching posts", error);
@@ -59,16 +66,11 @@ const index = () => {
     fetchAllPosts();
   });
 
-  const MAX_LINES = 2;
-  const [showfullText, setShowfullText] = useState(false);
-  const toggleShowFullText = () => {
-    setShowfullText(!showfullText);
-  };
-  const [isLiked, setIsLiked] = useState(false);
+  // Handle like/unlike post
   const handleLikePost = async (postId) => {
     try {
       const response = await axios.post(
-        `http://localhost:3000/like/${postId}/${userId}`
+        `http://192.168.2.34:3000/like/${postId}/${userId}`
       );
       if (response.status === 200) {
         const updatedPost = response.data.post;
@@ -78,7 +80,19 @@ const index = () => {
       console.log("Error liking/unliking the post", error);
     }
   };
-  const router = useRouter();
+
+  // Logout function
+  const handleLogout = async () => {
+    try {
+      // Remove the token from AsyncStorage
+      await AsyncStorage.removeItem("authToken");
+      // Redirect to the login screen after logout
+      router.replace("/login");
+    } catch (error) {
+      console.error("Error logging out: ", error);
+    }
+  };
+
   return (
     <ScrollView>
       <View
@@ -118,8 +132,16 @@ const index = () => {
         </Pressable>
 
         <Ionicons name="chatbox-ellipses-outline" size={24} color="black" />
+        
+        {/* Logout button */}
+        <Pressable onPress={handleLogout}>
+          <Text style={{ color: '#0072b1', fontWeight: 'bold', fontSize: 16 }}>
+            Logout
+          </Text>
+        </Pressable>
       </View>
 
+      {/* Render posts */}
       <View>
         {posts?.map((item, index) => (
           <View key={index}>
@@ -129,7 +151,6 @@ const index = () => {
                 justifyContent: "space-between",
                 marginHorizontal: 10,
               }}
-              key={index}
             >
               <View
                 style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
@@ -170,6 +191,7 @@ const index = () => {
               </View>
             </View>
 
+            {/* Post description */}
             <View
               style={{ marginTop: 10, marginHorizontal: 10, marginBottom: 12 }}
             >
@@ -186,11 +208,13 @@ const index = () => {
               )}
             </View>
 
+            {/* Post image */}
             <Image
               style={{ width: "100%", height: 240 }}
               source={{ uri: item?.imageUrl }}
             />
 
+            {/* Likes and actions */}
             {item?.likes?.length > 0 && (
               <View
                 style={{
@@ -210,10 +234,10 @@ const index = () => {
                 height: 2,
                 borderColor: "#E0E0E0",
                 borderWidth: 2,
-                
               }}
             />
 
+            {/* Actions */}
             <View
               style={{
                 flexDirection: "row",
@@ -227,13 +251,13 @@ const index = () => {
                   style={{ textAlign: "center" }}
                   name="like2"
                   size={24}
-                  color={isLiked? "#0072b1" : "gray"}
+                  color={isLiked ? "#0072b1" : "gray"}
                 />
                 <Text
                   style={{
                     textAlign: "center",
                     fontSize: 12,
-                    color: isLiked? "#0072b1" : "gray",
+                    color: isLiked ? "#0072b1" : "gray",
                     marginTop: 2,
                   }}
                 >

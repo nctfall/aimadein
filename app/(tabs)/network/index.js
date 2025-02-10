@@ -40,7 +40,7 @@ const index = () => {
   const fetchUserProfile = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:3000/profile/${userId}`
+        `http://192.168.2.34:3000/profile/${userId}`
       );
       const userData = response.data.user;
       setUser(userData);
@@ -55,7 +55,7 @@ const index = () => {
   }, [userId]);
   const fetchUsers = async () => {
     axios
-      .get(`http://localhost:3000/users/${userId}`)
+      .get(`http://192.168.2.34:3000/users/${userId}`)
       .then((response) => {
         setUsers(response.data);
       })
@@ -71,7 +71,7 @@ const index = () => {
   const fetchFriendRequests = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:3000/connection-request/${userId}`
+        `http://192.168.2.34:3000/connection-request/${userId}`
       );
       if (response.status === 200) {
         const connectionRequestsData = response.data?.map((friendRequest) => ({
