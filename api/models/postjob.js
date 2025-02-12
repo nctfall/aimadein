@@ -25,7 +25,7 @@ const postJobSchema = new mongoose.Schema({
    }
 });
 
-// Create a model for the postJob schema
+// Create a model for the postJob schemas
 const PostJob = mongoose.model('PostJob', postJobSchema);
 
 module.exports = PostJob;
