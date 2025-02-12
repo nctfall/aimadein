@@ -1,19 +1,6 @@
 {
   "name": "aimadeinafrica",
   "version": "1.0.0",
-  "private": true,
-  "description": "",
-  "homepage": "https://github.com/nctfall/aimadein#readme",
-  "bugs": {
-    "url": "https://github.com/nctfall/aimadein/issues"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/nctfall/aimadein.git"
-  },
-  "license": "ISC",
-  "author": "",
-  "type": "commonjs",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
@@ -25,7 +12,6 @@
     "@react-native-async-storage/async-storage": "1.18.2",
     "@react-native-firebase/app": "^21.7.4",
     "@react-native-firebase/storage": "^21.7.4",
-    "@react-native-picker/picker": "^2.11.0",
     "axios": "^1.7.9",
     "expo": "~49.0.13",
     "expo-constants": "~14.4.2",
@@ -45,5 +31,6 @@
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
-  }
+  },
+  "private": true
 }

@@ -1,4 +1,3 @@
-import React, { useState, useEffect, useRef } from "react";  // Add useRef import
 import {
   StyleSheet,
   Text,
@@ -8,8 +7,9 @@ import {
   Pressable,
   KeyboardAvoidingView,
   TextInput,
-  Alert,
+  Alert
 } from "react-native";
+import React, { useState, useEffect } from "react";
 import { AntDesign } from "@expo/vector-icons";
 import { MaterialIcons } from "@expo/vector-icons";
 import { Entypo } from '@expo/vector-icons';
@@ -18,8 +18,6 @@ import { useRouter } from "expo-router";
 import axios from "axios";
 import { firebase } from "../../firebase";  // Import your Firebase setup
 import { ref, getDownloadURL } from "firebase/storage";  // Import storage methods
-import { Picker } from '@react-native-picker/picker'; // Import Picker
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 const Register = () => {
   const [email, setEmail] = useState("");
@@ -27,8 +25,6 @@ const Register = () => {
   const [name, setName] = useState("");
   const [image, setImage] = useState("");
   const [imageUri, setImageUri] = useState(null);  // State to store image URI
-  const [userType, setUserType] = useState("Individual"); // State for user type (Individual/Company)
-  const pickerRef = useRef(null);  // Define the pickerRef using useRef
   const router = useRouter();
 
   // Fetch image URL from Firebase Storage when component mounts
@@ -48,13 +44,13 @@ const Register = () => {
   }, []);  // Empty dependency array to run effect only once when component mounts
 
   const handleRegister = () => {
+    console.log("hello")
     const user = {
         name: name,
         email: email,
         password: password,
-        profileImage: image,
-        userType: userType === "employee" ? "employee" : "company",  // Map dropdown value to DB field
-    };
+        profileImage: image
+    }
 
     axios.post("http://192.168.2.34:3000/register", user).then((response) => {
         console.log(response);
@@ -67,11 +63,11 @@ const Register = () => {
         Alert.alert("Registration failed", "An error occurred while registering");
         console.log("registration failed", error)
     });
-  };
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "black", alignItems: "center" }}>
-      <View style={{ width: 300 }}>
+      <View style={{ width: 350 }}>
         {imageUri ? (
           <Image
             style={{ width: "100%", aspectRatio: 16 / 9, resizeMode: "contain" }}
@@ -96,7 +92,6 @@ const Register = () => {
         </View>
 
         <View style={{ marginTop: 15 }}>
-          {/* Name Input */}
           <View
             style={{
               flexDirection: "row",
@@ -127,7 +122,6 @@ const Register = () => {
             />
           </View>
 
-          {/* Email Input */}
           <View
             style={{
               flexDirection: "row",
@@ -158,7 +152,6 @@ const Register = () => {
             />
           </View>
 
-          {/* Password Input */}
           <View
             style={{
               flexDirection: "row",
@@ -190,7 +183,6 @@ const Register = () => {
             />
           </View>
 
-          {/* Image URL Input */}
           <View
             style={{
               flexDirection: "row",
@@ -216,35 +208,6 @@ const Register = () => {
             />
           </View>
 
-          {/* Dropdown for user type */}
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 5,
-              backgroundColor: "#E0E0E0",
-              paddingVertical: 5,
-              borderRadius: 5,
-              marginTop: 20,
-            }}
-          >
-            <MaterialCommunityIcons name="form-dropdown" size={24} color="gray" style={{ marginLeft: 8 }} />
-            <Text style={{ color: "gray", marginLeft: 8, fontSize: 18 }}>User Type</Text>
-            <Picker
-              ref={pickerRef}  // Pass pickerRef here
-              selectedValue={userType}
-              style={{ width: 200, height: 50 }}
-              onValueChange={(itemValue) => {
-                setUserType(itemValue);
-                console.log(itemValue);
-              }}
-            >
-              <Picker.Item label="Individual" value="employee" style={{ color: 'black' }} />
-              <Picker.Item label="Company" value="company" style={{ color: 'black' }} />
-            </Picker>
-          </View>
-
-          {/* Register Button */}
           <Pressable
             onPress={handleRegister}
             style={{
@@ -269,12 +232,11 @@ const Register = () => {
             </Text>
           </Pressable>
 
-          {/* Login Redirect */}
           <Pressable onPress={() => router.replace("/login")} style={{ marginTop: 15 }}>
-            <Text style={{ textAlign: "center", color: "gray", fontSize: 16 }}>
-              Already have an account? 
-              <Text style={{ color: "#007FFF" }}>  Sign-in</Text>
-            </Text>
+          <Text style={{ textAlign: "center", color: "gray", fontSize: 16 }}>
+          Already have an account? 
+            <Text style={{ color: "#007FFF" }}>  Sign-in</Text>
+          </Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
