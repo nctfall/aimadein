@@ -152,7 +152,7 @@ const index = () => {
         </View>
 
         <Text>
-          Find and contact the right people. Plus see who's viewed your profile
+          Find and contact the right people. Explore more Job Opportunities
         </Text>
         <View
           style={{
