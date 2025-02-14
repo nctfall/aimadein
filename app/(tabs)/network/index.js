@@ -103,7 +103,7 @@ const index = () => {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: "white" }}>
-      {/* Top Bar with Logout Button and Text */}
+      {/* Top Bar with Logout Button and Texts */}
       <View
         style={{
           marginTop: 10,
