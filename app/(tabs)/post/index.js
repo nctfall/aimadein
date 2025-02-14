@@ -17,12 +17,16 @@ import * as FileSystem from "expo-file-system";
 import { firebase } from "../../../firebase";
 import axios from "axios";
 import { useRouter } from "expo-router";
+import { AntDesign } from "@expo/vector-icons";
 
 const index = () => {
   const [description, setDescription] = useState("");
   const [image, setImage] = useState("");
   const [userId, setUserId] = useState("");
   const router = useRouter();
+
+  
+
   useEffect(() => {
     const fetchUser = async () => {
       const token = await AsyncStorage.getItem("authToken");
@@ -33,6 +37,7 @@ const index = () => {
 
     fetchUser();
   }, []);
+
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.All,
@@ -46,6 +51,7 @@ const index = () => {
       setImage(result.assets[0].uri);
     }
   };
+
   const createPost = async () => {
     try {
       const uploadedUrl = await uploadFile();
@@ -69,9 +75,9 @@ const index = () => {
       console.log("error creating post", error);
     }
   };
+
   const uploadFile = async () => {
     try {
-      // Ensure that 'image' contains a valid file URI
       console.log("Image URI:", image);
 
       const { uri } = await FileSystem.getInfoAsync(image);
@@ -99,16 +105,42 @@ const index = () => {
       await ref.put(blob);
 
       const downloadURL = await ref.getDownloadURL();
-      // setUrl(downloadURL);
       return downloadURL;
-      // Alert.alert("Photo uploaded");
     } catch (error) {
       console.log("Error:", error);
-      // Handle the error or display a user-friendly message
     }
   };
+
+  const logout = async () => {
+    await AsyncStorage.removeItem("authToken");
+    router.replace("/(authenticate)/login");
+  };
+
   return (
     <ScrollView style={{ flex: 1, backgroundColor: "white" }}>
+      {/* Top Bar with Logout Button and Text */}
+      <View
+        style={{
+          marginTop: 10,
+          marginHorizontal: 10,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <Text style={{ fontSize: 16, fontWeight: "bold" }}>Post</Text>
+        <Pressable onPress={logout} style={{ flexDirection: "row", alignItems: "center" }}>
+          <AntDesign name="logout" size={22} color="black" />
+          <Text style={{ marginLeft: 5, fontSize: 16, fontWeight: "500", color: "black" }}>
+            Logout
+          </Text>
+        </Pressable>
+      </View>
+
+            <View
+              style={{ borderColor: "#E0E0E0", borderWidth: 2, marginVertical: 10 }}
+            />
+
       <View
         style={{
           flexDirection: "row",
@@ -196,7 +228,7 @@ const index = () => {
         <Pressable
           onPress={pickImage}
           style={{
-            widt: 40,
+            width: 40,
             height: 40,
             marginTop: 15,
             backgroundColor: "#E0E0E0",
