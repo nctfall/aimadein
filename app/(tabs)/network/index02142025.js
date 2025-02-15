@@ -2,6 +2,7 @@ import {
   StyleSheet,
   Text,
   View,
+  ScrollView,
   Pressable,
   FlatList,
 } from "react-native";
@@ -64,7 +65,7 @@ const index = () => {
   }, [userId]);
 
   const fetchUsers = async () => {
-    axios
+     axios
       .get(`http://192.168.2.34:3000/users/${userId}`)
       .then((response) => {
         setUsers(response.data);
@@ -73,6 +74,10 @@ const index = () => {
         console.log("error fetching user profile", error);
       });
   };
+  //console.log(users);
+
+  
+
 
   useEffect(() => {
     if (userId) {
@@ -100,8 +105,8 @@ const index = () => {
     }
   };
 
-  const renderHeader = () => (
-    <>
+  return (
+    <ScrollView style={{ flex: 1, backgroundColor: "white" }}>
       {/* Top Bar with Logout Button and Texts */}
       <View
         style={{
@@ -121,7 +126,9 @@ const index = () => {
         </Pressable>
       </View>
 
-      <View style={{ borderColor: "#E0E0E0", borderWidth: 2, marginVertical: 10 }} />
+      <View
+        style={{ borderColor: "#E0E0E0", borderWidth: 2, marginVertical: 10 }}
+      />
 
       <View
         style={{
@@ -136,7 +143,9 @@ const index = () => {
         <AntDesign name="arrowright" size={22} color="black" />
       </View>
 
-      <View style={{ borderColor: "#E0E0E0", borderWidth: 2, marginVertical: 10 }} />
+      <View
+        style={{ borderColor: "#E0E0E0", borderWidth: 2, marginVertical: 10 }}
+      />
 
       <View>
         {connectionRequests?.map((item, index) => (
@@ -175,28 +184,28 @@ const index = () => {
             marginTop: 8,
           }}
         >
-          <Text style={{ textAlign: "center", color: "white", fontWeight: "600" }}>
+          <Text
+            style={{ textAlign: "center", color: "white", fontWeight: "600" }}
+          >
             Try Premium
           </Text>
         </View>
       </View>
-    </>
-  );
 
-  const renderUserProfiles = ({ item }) => (
-    <UserProfile userId={userId} item={item} />
-  );
+      <FlatList
+        data={users}
+        columnWrapperStyle={{ justifyContent: "space-between" }}
+        numColumns={2}
+        keyExtractor={(item) => item._id}
+        renderItem={({ item, key }) => 
+          (
+          <UserProfile userId={userId} item={item} key={index} />
+        )
+   
 
-  return (
-    <FlatList
-      ListHeaderComponent={renderHeader}
-      data={users}
-      columnWrapperStyle={{ justifyContent: "space-between" }}
-      numColumns={2}
-      keyExtractor={(item) => item._id}
-      renderItem={renderUserProfiles}
-      contentContainerStyle={{ flexGrow: 1, backgroundColor: "white" }}
-    />
+      }
+      />
+    </ScrollView>
   );
 };
 

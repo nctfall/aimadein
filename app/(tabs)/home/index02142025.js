@@ -67,29 +67,20 @@ const Profile = () => {
       const userData = response.data.user;
       setUser(userData);
       setSkills(userData.skills?.join(", ") || "");
-      setWorkExperience(userData.workExperience?.map(work => ({
-        ...work,
-        startDate: work.startDate ? new Date(work.startDate).toISOString().slice(0, 10) : "",
-        endDate: work.endDate ? new Date(work.endDate).toISOString().slice(0, 10) : ""
-      })) || []);
+      setWorkExperience(userData.workExperience || []);
       setAddress(userData.address || {
         street: "",
         city: "",
         state: "",
         country: "",
       });
-      setEducation(userData.education?.map(education => ({
-        ...education,
-        yearOfGraduation: education.yearOfGraduation?.toString() || ""
-      })) || []);
+      setEducation(userData.education || []);
       setUserDescription(userData.userDescription || "");
     } catch (error) {
       console.log("Error fetching user profile", error);
       Alert.alert("Error", "Failed to fetch user profile. Please try again.");
     }
   };
-  
-  
 
   const handleSaveDescription = async () => {
     try {
@@ -98,17 +89,14 @@ const Profile = () => {
         skills: skills.split(",").map((skill) => skill.trim()),
         workExperience,
         address,
-        education: education.map(item => ({
-          ...item,
-          yearOfGraduation: item.yearOfGraduation ? parseInt(item.yearOfGraduation, 10) : null,
-        })),
+        education,
       };
-  
+
       const response = await axios.put(
         `http://192.168.2.34:3000/profile/${userId}`,
         payload
       );
-  
+
       if (response.status === 200) {
         await fetchUserProfile();
         setIsEditing(false);
@@ -119,7 +107,6 @@ const Profile = () => {
       Alert.alert("Error", "Failed to save profile. Please try again.");
     }
   };
-  
 
   const logout = async () => {
     await AsyncStorage.removeItem("authToken");
@@ -158,8 +145,7 @@ const Profile = () => {
     <ScrollView style={{ flex: 1, backgroundColor: "#F8F8F8" }}>
       <View style={styles.container}>
         <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.profilePicWrapper}>
-        <Ionicons name="arrow-back" size={24} color="black" />
+          <Pressable style={styles.profilePicWrapper}>
             <Image style={styles.profilePic} source={{ uri: user?.profilePic }} />
           </Pressable>
 
@@ -203,7 +189,6 @@ const Profile = () => {
                   <Text style={styles.sectionTitle}>Work Experience:</Text>
                   {workExperience.map((item, index) => (
                     <View key={index}>
-                      
                       <TextInput
                         style={styles.inputField}
                         placeholder="Company Name"
@@ -216,18 +201,18 @@ const Profile = () => {
                         value={item.jobTitle}
                         onChangeText={(text) => handleWorkExperienceChange(index, "jobTitle", text)}
                       />
-                    <TextInput
-                   style={styles.inputField}
-                   placeholder="Start Date (yyyy-mm-dd)"
-                   value={item.startDate} // This will now display the formatted date
-                   onChangeText={(text) => handleWorkExperienceChange(index, "startDate", text)}
-                  />
-                <TextInput
-                style={styles.inputField}
-                placeholder="End Date (yyyy-mm-dd)"
-                value={item.endDate} // This will now display the formatted date
-                onChangeText={(text) => handleWorkExperienceChange(index, "endDate", text)}
-                />
+                      <TextInput
+                        style={styles.inputField}
+                        placeholder="Start Date(yyyy-mm-dd)"
+                        value={item.startDate}
+                        onChangeText={(text) => handleWorkExperienceChange(index, "startDate", text)}
+                      />
+                      <TextInput
+                        style={styles.inputField}
+                        placeholder="End Date(yyyy-mm-dd)"
+                        value={item.endDate}
+                        onChangeText={(text) => handleWorkExperienceChange(index, "endDate", text)}
+                      />
                       <TextInput
                         style={styles.inputField}
                         placeholder="Responsibilities"
@@ -326,11 +311,10 @@ const Profile = () => {
                   <Text style={styles.sectionTitle}>Work Experience:</Text>
                   {workExperience.map((item, index) => (
                     <View key={index}>
-                      <Text>Comany Name: {item.companyName}</Text>
-                      <Text>    Job Title: {item.jobTitle}</Text>
-                      <Text>    Start Date: {formatDate(item.startDate)}</Text> 
-                      <Text>    End Date: {formatDate(item.endDate)}</Text>
-                      <Text>Job Responsibilities: {item.responsibilities}</Text>
+                      <Text>{item.companyName}</Text>
+                      <Text>{item.jobTitle}</Text>
+                      <Text>{formatDate(item.startDate)} to {formatDate(item.endDate)}</Text>
+                      <Text>{item.responsibilities}</Text>
                     </View>
                   ))}
                 </View>
@@ -338,10 +322,8 @@ const Profile = () => {
                   <Text style={styles.sectionTitle}>Education:</Text>
                   {education.map((item, index) => (
                     <View key={index}>
-                      <Text>Degree:  {item.degree}</Text>
-                      <Text>School:  {item.institution}</Text>
-                      <Text>Competion Year:{item.yearOfGraduation}</Text>
-                      <Text>Field of Study:  {item.fieldOfStudy}</Text>
+                      <Text>{item.degree} - {item.institution}</Text>
+                      <Text>{item.yearOfGraduation} | {item.fieldOfStudy}</Text>
                     </View>
                   ))}
                 </View>
