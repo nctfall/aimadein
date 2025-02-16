@@ -9,6 +9,7 @@ import {
 import React, { useState } from "react";
 
 const UserProfile = ({ item, userId }) => {
+  const [user, setUser] = useState();
   const [connectionSent, setConnectionSent] = useState(false);
   const sendConnectionRequest = async (currentUserId, selectedUserId) => {
     try {
@@ -58,7 +59,7 @@ const UserProfile = ({ item, userId }) => {
           {item?.name}
         </Text>
         <Text style={{ textAlign: "center", marginLeft: 1, marginTop: 2 }}>
-          Engineer Graduate | Linkedin member
+        
         </Text>
       </View>
 

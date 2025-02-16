@@ -29,7 +29,6 @@ const index = () => {
   const [salary, setSalary] = useState(""); // State for company salary
   const [jobDescription, setJobDescription] = useState(""); // State for company job description
   const router = useRouter();
-  const [user, setUser] = useState();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -107,7 +106,6 @@ const index = () => {
       if (!uri) {
         throw new Error("Invalid file URI");
       }
-      const filename = uri.split('/').pop();
 
       const blob = await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -122,9 +120,9 @@ const index = () => {
         xhr.send(null);
       });
 
-      //const filename = image.substring(image.lastIndexOf("/") + 1);
-      //const ref = firebase.storage().ref().child(filename);
-      const ref = firebase.storage().ref().child(`post/${filename}`);
+      const filename = image.substring(image.lastIndexOf("/") + 1);
+
+      const ref = firebase.storage().ref().child(filename);
       await ref.put(blob);
 
       const downloadURL = await ref.getDownloadURL();
@@ -139,73 +137,20 @@ const index = () => {
     router.replace("/(authenticate)/login");
   };
 
-
-   // Fetch User
-   useEffect(() => {
-    const fetchUser = async () => {
-      const token = await AsyncStorage.getItem("authToken");
-      const decodedToken = jwt_decode(token);
-      const userId = decodedToken.userId;
-      setUserId(userId);
-    };
-
-    fetchUser();
-  }, []);
-
-  useEffect(() => {
-    if (userId) {
-      fetchUserProfile();
-    }
-  }, [userId]);
-
-  // Fetch User Profile
-  const fetchUserProfile = async () => {
-    try {
-      const response = await axios.get(
-        `http://192.168.2.34:3000/profile/${userId}`
-      );
-      const userData = response.data.user;
-      setUser(userData);
-    } catch (error) {
-      console.log("Error fetching user profile", error);
-    }
-  };
-
   return (
     <ScrollView style={styles.container}>
       
-
-      <View
-  style={{
-    padding: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    position: 'relative', 
-  }}
->
-  <Pressable onPress={() => router.push("/home/profile")}>
-    <Image
-      style={{ width: 30, height: 30, borderRadius: 15 }}
-      source={{ uri: user?.profileImage }}
-    />
-  </Pressable>
-    <Text style={{ fontSize: 18, fontWeight: "600" }}>
-       {user?.name}
-    </Text>
-
-  {/* This is the logout container */}
-  <Pressable onPress={logout} style={[styles.logoutContainer, { position: 'absolute', top: 10, right: 10 }]}>
-    <AntDesign name="logout" size={22} color="black" />
-    <Text style={styles.logoutText}>Logout</Text>
-  </Pressable>
-  </View>
- 
-  <View style={styles.divider} />
-   
+      {/* Top Bar with Logout Button */}
       <View style={styles.topBar}>
         <Text style={styles.headerText}>Post</Text>
+        <Pressable onPress={logout} style={styles.logoutContainer}>
+          <AntDesign name="logout" size={22} color="black" />
+          <Text style={styles.logoutText}>Logout</Text>
+        </Pressable>
       </View>
+
+      {/* Divider */}
+      <View style={styles.divider} />
 
       <View style={styles.formContainer}>
         {/* Conditionally Render Fields Based on User Type */}
@@ -215,7 +160,7 @@ const index = () => {
             onChangeText={(text) => setDescription(text)}
             placeholder="What do you want to talk about?"
             placeholderTextColor={"#7D7D7D"}
-            style={[styles.textInputEmployee, { backgroundColor: 'white' }]}
+            style={styles.textInputEmployee}
             multiline={true}
             numberOfLines={10}
             textAlignVertical={"top"}
@@ -227,30 +172,28 @@ const index = () => {
               onChangeText={(text) => setJobTitle(text)}
               placeholder="Job Title"
               placeholderTextColor={"#7D7D7D"}
-              style={[styles.textInputCompany, { backgroundColor: 'white' }]}
+              style={styles.textInputCompany}
             />
             <TextInput
               value={skills}
               onChangeText={(text) => setSkills(text)}
               placeholder="Skills"
               placeholderTextColor={"#7D7D7D"}
-              style={[styles.textInputCompany, { backgroundColor: 'white' }]}
+              style={styles.textInputCompany}
             />
             <TextInput
               value={salary}
               onChangeText={(text) => setSalary(text)}
               placeholder="Salary"
               placeholderTextColor={"#7D7D7D"}
-              style={[styles.textInputCompany, { backgroundColor: 'white' }]}
+              style={styles.textInputCompany}
             />
             <TextInput
               value={jobDescription}
               onChangeText={(text) => setJobDescription(text)}
               placeholder="Job Description"
               placeholderTextColor={"#7D7D7D"}
-              style={[styles.textInputCompany, { backgroundColor: 'white' }]}
-              numberOfLines={10}
-              textAlignVertical={"top"}
+              style={styles.textInputCompany}
             />
           </>
         )}
@@ -266,12 +209,11 @@ const index = () => {
           <Text style={styles.imagePickerText}>Upload Image</Text>
         </Pressable>
       )}
-      <Text></Text>
+
       {/* Post Button at the Bottom */}
       <Pressable
         onPress={createPost}
         style={styles.postButton}
-        
       >
         <Text style={styles.postButtonText}>
           {userType === 'employee' ? 'Post' : 'Post Job'}
@@ -284,7 +226,7 @@ const index = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    //backgroundColor: "white",
+    backgroundColor: "white",
   },
   topBar: {
     marginTop: 10,

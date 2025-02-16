@@ -1,7 +1,12 @@
 const mongoose = require('mongoose');
 
 const postJobSchema = new mongoose.Schema({
-   jobTitle: {
+    user:{
+           type:mongoose.Schema.Types.ObjectId,
+           ref:"User",
+           required:true
+    },
+    jobTitle: {
        type: String,
        required: true,
    },

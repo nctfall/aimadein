@@ -72,7 +72,6 @@ app.post("/register", async (req, res) => {
   }
 });
 
-//Send verification email via gmail SMTP
 const sendVerificationEmail = async (email, verificationToken) => {
   const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -143,7 +142,7 @@ app.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid password" });
     }
 
-    const token = jwt.sign({ userId: user._id, userType: user.userType, userName:user.name }, secretKey);
+    const token = jwt.sign({ userId: user._id }, secretKey);
 
     res.status(200).json({ token });
   } catch (error) {
@@ -151,7 +150,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// GET User's profile
+// User's profile
 app.get("/profile/:userId", async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -167,7 +166,7 @@ app.get("/profile/:userId", async (req, res) => {
   }
 });
 
-//GET users
+//fetch users
 app.get("/users/:userId", async (req, res) => {
   try {
     const loggedInUserId = req.params.userId;
@@ -198,8 +197,43 @@ app.get("/users/:userId", async (req, res) => {
   }
 });
 
+// Endpoint to create a job post
+/*app.post("/create-job", async (req, res) => {
+  try {
+    const { jobTitle, jobDescription, skills, salary, userId } = req.body;
 
-//POST job posts
+    // Ensure that only companies can post jobs
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    if (user.userType !== 'company') {
+      return res.status(403).json({ message: "Only companies can post jobs" });
+    }
+
+    const newJobPost = new PostJob({
+      jobTitle,
+      jobDescription,
+      skills,
+      salary,
+      createdAt: Date.now(),
+    });
+
+    // Save the job post
+    await newJobPost.save();
+
+    res.status(201).json({
+      message: "Job post created successfully",
+      jobPost: newJobPost,
+    });
+  } catch (error) {
+    console.log("Error creating job post", error);
+    res.status(500).json({ message: "Error creating job post" });
+  }
+});
+*/
+
 app.post("/create-job", async (req, res) => {
   try {
     const { jobTitle, jobDescription, skills, salary, userId } = req.body;
@@ -219,7 +253,6 @@ app.post("/create-job", async (req, res) => {
       jobDescription,
       skills,
       salary,
-      user,  ///// updated userid to user
       createdAt: Date.now(),
     });
 
@@ -238,17 +271,18 @@ app.post("/create-job", async (req, res) => {
 
 
 
+
+// Endpoint to fetch all job posts
 app.get("/all-jobs", async (req, res) => {
   try {
-    const jobPosts = await PostJob.find().sort({ createdAt: -1 }); // Sort by creation date, descending
+    const jobPosts = await PostJob.find(); // You can also populate other fields if needed
+
     res.status(200).json({ jobPosts });
   } catch (error) {
     console.log("Error fetching all job posts", error);
     res.status(500).json({ message: "Error fetching all job posts" });
   }
 });
-
-
 
 // Send a connection request
 app.post("/connection-request", async (req, res) => {
@@ -370,6 +404,35 @@ app.get("/all", async (req, res) => {
 app.listen(port, () => {
   console.log("Server is running on port 3000");
 });
+
+// User's profile update endpoint
+/*app.put("/profile/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { userDescription, skills, workExperience, education, address } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Only allow updates for 'employee' user type
+    if (user.userType === 'employee') {
+      user.userDescription = userDescription;
+      user.skills = skills || user.skills;
+      user.workExperience = workExperience || user.workExperience;
+      user.education = education || user.education;
+
+      await user.save();
+      res.status(200).json({ message: "Profile updated successfully", user });
+    } else {
+      res.status(400).json({ message: "Only employees can update these fields" });
+    }
+  } catch (error) {
+    console.log("Error updating user profile", error);
+    res.status(500).json({ message: "Error updating user profile" });
+  }
+});*/
 
 // User's profile update endpoint
 app.put("/profile/:userId", async (req, res) => {

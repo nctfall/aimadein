@@ -165,20 +165,7 @@ const index = () => {
         <Text>
           Find and contact the right people. Explore more Job Opportunities
         </Text>
-        <View
-          style={{
-            backgroundColor: "#FFC72C",
-            width: 140,
-            paddingHorizontal: 10,
-            paddingVertical: 5,
-            borderRadius: 25,
-            marginTop: 8,
-          }}
-        >
-          <Text style={{ textAlign: "center", color: "white", fontWeight: "600" }}>
-            Try Premium
-          </Text>
-        </View>
+        
       </View>
     </>
   );
