@@ -5,12 +5,12 @@ import { getStorage } from "firebase/storage";  // Import Storage from Firebase 
 
 const firebaseConfig = {
 
-  apiKey: "AIzaSyDXTBQgfGy5QcucUCkRcPB2TuehbCwF4e8",
+  apiKey: "AIzaSyDXTBQgfGy5QcucUCkRcPB2TuehbCwF4e811",
   authDomain: "aimadein.firebaseapp.com",
   projectId: "aimadein",
   storageBucket: "aimadein.firebasestorage.app",
   messagingSenderId: "209904749229",
-  appId: "1:209904749229:web:1009289f4ce28681921424"
+  appId: "1:209904749229:web:1009289f4ce2868192142411"
 
 };
 
