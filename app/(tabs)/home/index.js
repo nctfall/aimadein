@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -7,290 +8,314 @@ import {
   Image,
   TextInput,
 } from "react-native";
-import React, { useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import jwt_decode from "jwt-decode";
 import axios from "axios";
-import { Ionicons, Entypo, Feather, FontAwesome } from "@expo/vector-icons";
-import { SimpleLineIcons } from "@expo/vector-icons";
-import { AntDesign } from "@expo/vector-icons";
-import moment from "moment";
 import { useRouter } from "expo-router";
+import moment from "moment";
+import {
+  Ionicons,
+  Entypo,
+  Feather,
+  FontAwesome,
+  AntDesign,
+  SimpleLineIcons,
+} from "@expo/vector-icons";
 
-const index = () => {
+// Reusable Components
+const UserProfileImage = ({ uri, onPress }) => (
+  <Pressable onPress={onPress}>
+    <Image style={styles.profileImage} source={{ uri }} />
+  </Pressable>
+);
+
+const PostHeader = ({ user, createdAt }) => (
+  <View style={styles.postHeader}>
+    <UserProfileImage uri={user?.profileImage} />
+    <View style={styles.userInfo}>
+      <Text style={styles.userName}>{user?.name}</Text>
+      <Text style={styles.userDetails}>{moment(createdAt).format("MMMM Do YYYY")}</Text>
+    </View>
+    <View style={styles.postActions}>
+      <Entypo name="dots-three-vertical" size={20} color="black" />
+      <Feather name="x" size={20} color="black" />
+    </View>
+  </View>
+);
+
+const PostContent = ({ description, imageUrl, showfullText, toggleShowFullText }) => (
+  <View style={styles.postContent}>
+    <Text style={styles.postText} numberOfLines={showfullText ? undefined : 2}>
+      {description}
+    </Text>
+    {!showfullText && (
+      <Pressable onPress={toggleShowFullText}>
+        <Text style={styles.seeMoreText}>See more</Text>
+      </Pressable>
+    )}
+    {imageUrl && ( // Conditionally render the image only if imageUrl exists
+      <Image style={styles.postImage} source={{ uri: imageUrl }} />
+    )}
+  </View>
+);
+
+const PostFooter = ({ likes, isLiked, handleLikePost, postId }) => (
+  <View style={styles.postFooter}>
+    {likes?.length > 0 && (
+      <View style={styles.likesContainer}>
+        <SimpleLineIcons name="like" size={16} color="#0072b1" />
+        <Text style={styles.likesText}>{likes.length}</Text>
+      </View>
+    )}
+    <View style={styles.footerActions}>
+      <Pressable onPress={() => handleLikePost(postId)}>
+        <AntDesign
+          name="like2"
+          size={24}
+          color={isLiked ? "#0072b1" : "gray"}
+        />
+        <Text style={[styles.actionText, isLiked && styles.likedText]}>Like</Text>
+      </Pressable>
+      <Pressable>
+        <FontAwesome name="comment-o" size={20} color="gray" />
+        <Text style={styles.actionText}>Comment</Text>
+      </Pressable>
+      <Pressable>
+        <Ionicons name="md-share-outline" size={20} color="gray" />
+        <Text style={styles.actionText}>Repost</Text>
+      </Pressable>
+      <Pressable>
+        <Feather name="send" size={20} color="gray" />
+        <Text style={styles.actionText}>Send</Text>
+      </Pressable>
+    </View>
+  </View>
+);
+
+const HomeScreen = () => {
   const [userId, setUserId] = useState("");
-  const [user, setUser] = useState();
+  const [user, setUser] = useState(null);
   const [posts, setPosts] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredPosts, setFilteredPosts] = useState([]);
+  const [showfullText, setShowfullText] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+
+  const router = useRouter();
+
   useEffect(() => {
     const fetchUser = async () => {
       const token = await AsyncStorage.getItem("authToken");
       const decodedToken = jwt_decode(token);
-      const userId = decodedToken.userId;
-      setUserId(userId);
+      setUserId(decodedToken.userId);
     };
 
     fetchUser();
   }, []);
+
   useEffect(() => {
     if (userId) {
       fetchUserProfile();
     }
   }, [userId]);
+
   const fetchUserProfile = async () => {
     try {
-      const response = await axios.get(
-        `http://192.168.2.34:3000/profile/${userId}`
-      );
-      const userData = response.data.user;
-      setUser(userData);
+      const response = await axios.get(`http://192.168.2.34:3000/profile/${userId}`);
+      setUser(response.data.user);
     } catch (error) {
-      console.log("error fetching user profile", error);
+      console.log("Error fetching user profile", error);
     }
   };
+
   useEffect(() => {
     const fetchAllPosts = async () => {
       try {
         const response = await axios.get("http://192.168.2.34:3000/all");
-        setPosts(response.data.posts);
+        const sortedPosts = response.data.posts.sort((a, b) => 
+          moment(b.createdAt).valueOf() - moment(a.createdAt).valueOf()
+        );
+        setPosts(sortedPosts);
+        setFilteredPosts(sortedPosts);
       } catch (error) {
-        console.log("error fetching posts", error);
+        console.log("Error fetching posts", error);
       }
     };
-    fetchAllPosts();
-  });
 
-  const MAX_LINES = 2;
-  const [showfullText, setShowfullText] = useState(false);
-  const toggleShowFullText = () => {
-    setShowfullText(!showfullText);
+    fetchAllPosts();
+  }, []);
+
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    const filtered = query 
+      ? posts.filter(post => 
+          post.user.name.toLowerCase().includes(query.toLowerCase())
+        )
+      : posts;
+    setFilteredPosts(filtered);
   };
-  const [isLiked, setIsLiked] = useState(false);
+
+  const toggleShowFullText = () => setShowfullText(!showfullText);
+
   const handleLikePost = async (postId) => {
     try {
-      const response = await axios.post(
-        `http://192.168.2.34:3000/like/${postId}/${userId}`
-      );
+      const response = await axios.post(`http://192.168.2.34:3000/like/${postId}/${userId}`);
       if (response.status === 200) {
-        const updatedPost = response.data.post;
-        setIsLiked(updatedPost.likes.some((like) => like.user === userId));
+        setIsLiked(response.data.post.likes.some(like => like.user === userId));
       }
     } catch (error) {
       console.log("Error liking/unliking the post", error);
     }
   };
-  const router = useRouter();
+
   return (
-    <ScrollView>
-      <View
-        style={{
-          padding: 10,
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 4,
-        }}
-      >
-        <Pressable onPress={() => router.push("/home/profile")}>
-          <Image
-            style={{ width: 30, height: 30, borderRadius: 15 }}
-            source={{ uri: user?.profileImage }}
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <UserProfileImage uri={user?.profileImage} onPress={() => router.push("/home/profile")} />
+        <View style={styles.searchContainer}>
+          <AntDesign name="search1" size={20} color="black" />
+          <TextInput
+            placeholder="Search by name"
+            value={searchQuery}
+            onChangeText={handleSearch}
+            style={styles.searchInput}
           />
-        </Pressable>
-
-        <Pressable
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            marginHorizontal: 7,
-            gap: 10,
-            backgroundColor: "white",
-            borderRadius: 3,
-            height: 30,
-            flex: 1,
-          }}
-        >
-          <AntDesign
-            style={{ marginLeft: 10 }}
-            name="search1"
-            size={20}
-            color="black"
-          />
-          <TextInput placeholder="Search" />
-        </Pressable>
-
-        <Ionicons name="chatbox-ellipses-outline" size={24} color="black" />
+        </View>
       </View>
 
-      <View>
-        {posts?.map((item, index) => (
-          <View key={index}>
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                marginHorizontal: 10,
-              }}
-              key={index}
-            >
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
-              >
-                <Image
-                  style={{ width: 60, height: 60, borderRadius: 30 }}
-                  source={{ uri: item?.user?.profileImage }}
-                />
-
-                <View style={{ flexDirection: "column", gap: 2 }}>
-                  <Text style={{ fontSize: 15, fontWeight: "600" }}>
-                    {item?.user?.name}
-                  </Text>
-                  <Text
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                    style={{
-                      width: 230,
-                      color: "gray",
-                      fontSize: 15,
-                      fontWeight: "400",
-                    }}
-                  >
-                    {/*Engineer Graduate | LinkedIn Member*/}
-                    
-                  </Text>
-                  <Text style={{ color: "gray" }}>
-                    {moment(item.createdAt).format("MMMM Do YYYY")}
-                  </Text>
-                </View>
-              </View>
-
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
-              >
-                <Entypo name="dots-three-vertical" size={20} color="black" />
-
-                <Feather name="x" size={20} color="black" />
-              </View>
-            </View>
-
-            <View
-              style={{ marginTop: 10, marginHorizontal: 10, marginBottom: 12 }}
-            >
-              <Text
-                style={{ fontSize: 15 }}
-                numberOfLines={showfullText ? undefined : MAX_LINES}
-              >
-                {item?.description}
-              </Text>
-              {!showfullText && (
-                <Pressable onPress={toggleShowFullText}>
-                  <Text>See more</Text>
-                </Pressable>
-              )}
-            </View>
-
-            <Image
-              style={{ width: "100%", height: 240 }}
-              source={{ uri: item?.imageUrl }}
-            />
-
-            {item?.likes?.length > 0 && (
-              <View
-                style={{
-                  padding: 10,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                <SimpleLineIcons name="like" size={16} color="#0072b1" />
-                <Text style={{ color: "gray" }}>{item?.likes?.length}</Text>
-              </View>
-            )}
-
-            <View
-              style={{
-                height: 2,
-                borderColor: "#E0E0E0",
-                borderWidth: 2,
-                
-              }}
-            />
-
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-around",
-                marginVertical: 10,
-              }}
-            >
-              <Pressable onPress={() => handleLikePost(item?._id)}>
-                <AntDesign
-                  style={{ textAlign: "center" }}
-                  name="like2"
-                  size={24}
-                  color={isLiked? "#0072b1" : "gray"}
-                />
-                <Text
-                  style={{
-                    textAlign: "center",
-                    fontSize: 12,
-                    color: isLiked? "#0072b1" : "gray",
-                    marginTop: 2,
-                  }}
-                >
-                  Like
-                </Text>
-              </Pressable>
-              <Pressable>
-                <FontAwesome
-                  name="comment-o"
-                  size={20}
-                  color="gray"
-                  style={{ textAlign: "center" }}
-                />
-                <Text
-                  style={{
-                    textAlign: "center",
-                    marginTop: 2,
-                    fontSize: 12,
-                    color: "gray",
-                  }}
-                >
-                  Comment
-                </Text>
-              </Pressable>
-              <Pressable>
-                <Ionicons
-                  name="md-share-outline"
-                  size={20}
-                  color="gray"
-                  style={{ textAlign: "center" }}
-                />
-                <Text
-                  style={{
-                    marginTop: 2,
-                    fontSize: 12,
-                    textAlign: "center",
-                    color: "gray",
-                  }}
-                >
-                  repost
-                </Text>
-              </Pressable>
-              <Pressable>
-                <Feather name="send" size={20} color="gray" />
-                <Text style={{ marginTop: 2, fontSize: 12, color: "gray" }}>
-                  Send
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        ))}
-      </View>
+      {filteredPosts.map((post, index) => (
+        <View key={post._id} style={styles.postCard}>
+          <PostHeader user={post.user} createdAt={post.createdAt} />
+          <PostContent
+            description={post.description}
+            imageUrl={post.imageUrl} // Pass imageUrl conditionally
+            showfullText={showfullText}
+            toggleShowFullText={toggleShowFullText}
+          />
+          <PostFooter
+            likes={post.likes}
+            isLiked={isLiked}
+            handleLikePost={handleLikePost}
+            postId={post._id}
+          />
+        </View>
+      ))}
     </ScrollView>
   );
 };
 
-export default index;
+export default HomeScreen;
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#f5f5f5",
+  },
+  header: {
+    padding: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+  },
+  profileImage: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0f0f0",
+    borderRadius: 20,
+    height: 40,
+    flex: 1,
+    paddingHorizontal: 10,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 16,
+  },
+  postCard: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    margin: 10,
+    padding: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  postHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  userInfo: {
+    flexDirection: "column",
+    gap: 2,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  userDetails: {
+    color: "gray",
+    fontSize: 14,
+  },
+  postActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  postContent: {
+    marginTop: 10,
+    marginBottom: 12,
+  },
+  postText: {
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  seeMoreText: {
+    color: "#0072b1",
+    marginTop: 5,
+  },
+  postImage: {
+    width: "100%",
+    height: 240,
+    borderRadius: 10,
+    marginTop: 10,
+  },
+  likesContainer: {
+    padding: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  likesText: {
+    color: "gray",
+  },
+  postFooter: {
+    borderTopWidth: 1,
+    borderColor: "#e0e0e0",
+    paddingVertical: 10,
+  },
+  footerActions: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+  },
+  actionText: {
+    textAlign: "center",
+    fontSize: 12,
+    color: "gray",
+    marginTop: 2,
+  },
+  likedText: {
+    color: "#0072b1",
+  },
+});

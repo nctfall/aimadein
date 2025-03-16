@@ -26,44 +26,45 @@ mongoose
   });
 
 app.listen(port, () => {
-  console.log("Server is running on port 8000");
+  console.log("Server is running on port 3000");
 });
 
 const User = require("./models/user");
 const Post = require("./models/post");
+const PostJob = require("./models/postjob"); // Import PostJob model
 
-//endpoint to register a user in the backend
+// Endpoint to register a user in the backend
 app.post("/register", async (req, res) => {
   try {
-    const { name, email, password, profileImage } = req.body;
+    const { name, email, password, profileImage, userType } = req.body;
 
-    //check if the email is already registered
+    // Check if the email is already registered
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       console.log("Email already registered");
       return res.status(400).json({ message: "Email already registered" });
     }
 
-    //create a new User
+    // Create a new User
     const newUser = new User({
       name,
       email,
       password,
       profileImage,
+      userType,
     });
 
-    //generate the verification token
+    // Generate the verification token
     newUser.verificationToken = crypto.randomBytes(20).toString("hex");
 
-    //save the user to the database
+    // Save the user to the database
     await newUser.save();
 
-    //send the verification email to the registered user
+    // Send the verification email to the registered user
     sendVerificationEmail(newUser.email, newUser.verificationToken);
 
     res.status(202).json({
-      message:
-        "Registration successful.Please check your mail for verification",
+      message: "Registration successful. Please check your mail for verification",
     });
   } catch (error) {
     console.log("Error registering user", error);
@@ -71,6 +72,7 @@ app.post("/register", async (req, res) => {
   }
 });
 
+//Send verification email via gmail SMTP
 const sendVerificationEmail = async (email, verificationToken) => {
   const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -84,10 +86,10 @@ const sendVerificationEmail = async (email, verificationToken) => {
     from: "aaimadein@gmail.com",
     to: email,
     subject: "Email Verification",
-    text: `please click the following link to verify your email : http://localhost:3000/verify/${verificationToken}`,
+    text: `Please click the following link to verify your email: http://192.168.2.34:3000/verify/${verificationToken}`,
   };
 
-  //send the mail
+  // Send the mail
   try {
     await transporter.sendMail(mailOptions);
     console.log("Verification email sent successfully");
@@ -96,7 +98,7 @@ const sendVerificationEmail = async (email, verificationToken) => {
   }
 };
 
-//endpoint to verify email
+// Endpoint to verify email
 app.get("/verify/:token", async (req, res) => {
   try {
     const token = req.params.token;
@@ -106,7 +108,7 @@ app.get("/verify/:token", async (req, res) => {
       return res.status(404).json({ message: "Invalid verification token" });
     }
 
-    //mark the user as verified
+    // Mark the user as verified
     user.verified = true;
     user.verificationToken = undefined;
 
@@ -120,29 +122,28 @@ app.get("/verify/:token", async (req, res) => {
 
 const generateSecretKey = () => {
   const secretKey = crypto.randomBytes(32).toString("hex");
-
   return secretKey;
 };
 
 const secretKey = generateSecretKey();
 
-//endpoint to login a user.
+// Endpoint to login a user
 app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    //check if user exists already
+    // Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    //check if password is correct
+    // Check if password is correct
     if (user.password !== password) {
       return res.status(401).json({ message: "Invalid password" });
     }
 
-    const token = jwt.sign({ userId: user._id }, secretKey);
+    const token = jwt.sign({ userId: user._id, userType: user.userType, userName:user.name }, secretKey);
 
     res.status(200).json({ token });
   } catch (error) {
@@ -150,14 +151,14 @@ app.post("/login", async (req, res) => {
   }
 });
 
-//user's profile
+// GET User's profile
 app.get("/profile/:userId", async (req, res) => {
   try {
     const userId = req.params.userId;
 
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: "user not found" });
+      return res.status(404).json({ message: "User not found" });
     }
 
     res.status(200).json({ user });
@@ -166,6 +167,7 @@ app.get("/profile/:userId", async (req, res) => {
   }
 });
 
+//GET users
 app.get("/users/:userId", async (req, res) => {
   try {
     const loggedInUserId = req.params.userId;
@@ -196,7 +198,59 @@ app.get("/users/:userId", async (req, res) => {
   }
 });
 
-//send a connection request
+
+//POST job posts
+app.post("/create-job", async (req, res) => {
+  try {
+    const { jobTitle, jobDescription, skills, salary, userId } = req.body;
+
+    // Ensure that only companies can post jobs
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    if (user.userType !== 'company') {
+      return res.status(403).json({ message: "Only companies can post jobs" });
+    }
+
+    const newJobPost = new PostJob({
+      jobTitle,
+      jobDescription,
+      skills,
+      salary,
+      user,  ///// updated userid to user
+      createdAt: Date.now(),
+    });
+
+    // Save the job post
+    await newJobPost.save();
+
+    res.status(201).json({
+      message: "Job post created successfully",
+      jobPost: newJobPost,
+    });
+  } catch (error) {
+    console.log("Error creating job post", error);
+    res.status(500).json({ message: "Error creating job post" });
+  }
+});
+
+
+
+app.get("/all-jobs", async (req, res) => {
+  try {
+    const jobPosts = await PostJob.find().sort({ createdAt: -1 }); // Sort by creation date, descending
+    res.status(200).json({ jobPosts });
+  } catch (error) {
+    console.log("Error fetching all job posts", error);
+    res.status(500).json({ message: "Error fetching all job posts" });
+  }
+});
+
+
+
+// Send a connection request
 app.post("/connection-request", async (req, res) => {
   try {
     const { currentUserId, selectedUserId } = req.body;
@@ -215,7 +269,7 @@ app.post("/connection-request", async (req, res) => {
   }
 });
 
-//endpoint to show all the connections requests
+// Endpoint to show all the connection requests
 app.get("/connection-request/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
@@ -233,7 +287,7 @@ app.get("/connection-request/:userId", async (req, res) => {
   }
 });
 
-//endpoint to accept a connection request
+// Endpoint to accept a connection request
 app.post("/connection-request/accept", async (req, res) => {
   try {
     const { senderId, recepientId } = req.body;
@@ -255,14 +309,14 @@ app.post("/connection-request/accept", async (req, res) => {
     await sender.save();
     await recepient.save();
 
-    res.status(200).json({ message: "Friend request acccepted" });
+    res.status(200).json({ message: "Friend request accepted" });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
-//endpoint to fetch all the connections of a user
+// Endpoint to fetch all the connections of a user
 app.get("/connections/:userId", async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -272,16 +326,16 @@ app.get("/connections/:userId", async (req, res) => {
       .exec();
 
     if (!user) {
-      return res.status(404).json({ message: "User is not found" });
+      return res.status(404).json({ message: "User not found" });
     }
     res.status(200).json({ connections: user.connections });
   } catch (error) {
-    console.log("error fetching the connections", error);
-    res.status(500).json({ message: "Error fetching the connections" });
+    console.log("Error fetching connections", error);
+    res.status(500).json({ message: "Error fetching connections" });
   }
 });
 
-//endpoint to create a post
+// Endpoint to create a post
 app.post("/create", async (req, res) => {
   try {
     const { description, imageUrl, userId } = req.body;
@@ -294,69 +348,99 @@ app.post("/create", async (req, res) => {
 
     await newPost.save();
 
-    res
-      .status(201)
-      .json({ message: "Post created successfully", post: newPost });
+    res.status(201).json({ message: "Post created successfully", post: newPost });
   } catch (error) {
-    console.log("error creating the post", error);
+    console.log("Error creating the post", error);
     res.status(500).json({ message: "Error creating the post" });
   }
 });
 
-//endpoint to fetch all the posts
+// Endpoint to fetch all the posts
 app.get("/all", async (req, res) => {
   try {
     const posts = await Post.find().populate("user", "name profileImage");
 
     res.status(200).json({ posts });
   } catch (error) {
-    console.log("error fetching all the posts", error);
-    res.status(500).json({ message: "Error fetching all the posts" });
+    console.log("Error fetching all posts", error);
+    res.status(500).json({ message: "Error fetching all posts" });
   }
 });
 
-//endpoints to like a post
-app.post("/like/:postId/:userId", async (req, res) => {
+app.listen(port, () => {
+  console.log("Server is running on port 3000");
+});
+
+
+// Endpoint to fetch a specific job post by ID
+app.get("/job/:id", async (req, res) => {
   try {
-    const postId = req.params.postId;
-    const userId = req.params.userId;
+    const jobId = req.params.id;
 
-    const post = await Post.findById(postId);
-    if (!post) {
-      return res.status(400).json({ message: "Post not found" });
+    // Find the job post by ID and populate the user field
+    const jobPost = await PostJob.findById(jobId).populate("user", "name profileImage");
+
+    if (!jobPost) {
+      return res.status(404).json({ message: "Job post not found" });
     }
 
-    //check if the user has already liked the post
-    const existingLike = post?.likes.find(
-      (like) => like.user.toString() === userId
-    );
-
-    if (existingLike) {
-      post.likes = post.likes.filter((like) => like.user.toString() !== userId);
-    } else {
-      post.likes.push({ user: userId });
-    }
-
-    await post.save();
-
-    res.status(200).json({ message: "Post like/unlike successfull", post });
+    res.status(200).json({ jobPost });
   } catch (error) {
-    console.log("error likeing a post", error);
-    res.status(500).json({ message: "Error liking the post" });
+    console.log("Error fetching job post", error);
+    res.status(500).json({ message: "Error fetching job post" });
   }
 });
 
-//endpoint to update user description
+// User's profile update endpoint
 app.put("/profile/:userId", async (req, res) => {
   try {
-    const userId = req.params.userId;
-    const { userDescription } = req.body;
+    const { userId } = req.params;
+    const { userDescription, skills, workExperience, education, address } = req.body;
 
-    await User.findByIdAndUpdate(userId, { userDescription });
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    res.status(200).json({ message: "User profile updated successfully" });
+    // Only allow updates for 'employee' user type
+    if (user.userType === 'employee') {
+      // Update user fields
+      user.userDescription = userDescription || user.userDescription;
+      user.skills = skills || user.skills;
+
+      // Update work experience with proper date formatting
+      if (workExperience) {
+        user.workExperience = workExperience.map((exp) => ({
+          companyName: exp.companyName,
+          jobTitle: exp.jobTitle,
+          startDate: exp.startDate ? new Date(exp.startDate) : null,
+          endDate: exp.endDate ? new Date(exp.endDate) : null,
+          responsibilities: exp.responsibilities,
+        }));
+      }
+
+      // Update education
+      user.education = education || user.education;
+
+      // Update address
+      if (address) {
+        user.address = {
+          street: address.street || user.address?.street,
+          city: address.city || user.address?.city,
+          state: address.state || user.address?.state,
+          zipcode: address.zipcode || user.address?.zipcode,
+          country: address.country || user.address?.country,
+        };
+      }
+
+      await user.save();
+      res.status(200).json({ message: "Profile updated successfully", user });
+    } else {
+      res.status(400).json({ message: "Only employees can update these fields" });
+    }
   } catch (error) {
-    console.log("Error updating user Profile", error);
+    console.log("Error updating user profile", error);
     res.status(500).json({ message: "Error updating user profile" });
   }
-});
+}
+);

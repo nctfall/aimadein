@@ -27,7 +27,13 @@ const postJobSchema = new mongoose.Schema({
    createdAt: {
        type: Date,
        default: Date.now
-   }
+   },
+   applicants: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+  ],
 });
 
 // Create a model for the postJob schemas

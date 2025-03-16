@@ -86,7 +86,7 @@ const sendVerificationEmail = async (email, verificationToken) => {
     from: "aaimadein@gmail.com",
     to: email,
     subject: "Email Verification",
-    text: `Please click the following link to verify your email: http://localhost:3000/verify/${verificationToken}`,
+    text: `Please click the following link to verify your email: http://192.168.2.34:3000/verify/${verificationToken}`,
   };
 
   // Send the mail
@@ -237,10 +237,30 @@ app.post("/create-job", async (req, res) => {
 });
 
 
-
+//get all jobs
 app.get("/all-jobs", async (req, res) => {
   try {
-    const jobPosts = await PostJob.find().sort({ createdAt: -1 }); // Sort by creation date, descending
+    const { userId } = req.query; // Get userId from query params
+
+    console.log("Fetching jobs for userId:", userId); // Log the userId
+
+    let jobPosts;
+    if (userId) {
+      // Fetch jobs posted by a specific user (company) and populate user details
+      jobPosts = await PostJob.find({ user: userId })
+        .populate("user", "name profileImage") // Populate user details
+        .sort({ createdAt: -1 });
+
+      console.log("Jobs for company:", jobPosts); // Log the fetched jobs
+    } else {
+      // Fetch all jobs and populate user details
+      jobPosts = await PostJob.find()
+        .populate("user", "name profileImage") // Populate user details
+        .sort({ createdAt: -1 });
+
+      console.log("All jobs:", jobPosts); // Log all jobs
+    }
+
     res.status(200).json({ jobPosts });
   } catch (error) {
     console.log("Error fetching all job posts", error);
@@ -248,7 +268,95 @@ app.get("/all-jobs", async (req, res) => {
   }
 });
 
+//edit job-post
+app.put("/jobs/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { jobTitle, jobDescription, skills, salary } = req.body;
 
+    const updatedJob = await PostJob.findByIdAndUpdate(
+      id,
+      { jobTitle, jobDescription, skills, salary },
+      { new: true }
+    );
+
+    if (!updatedJob) {
+      return res.status(404).json({ message: "Job post not found" });
+    }
+
+    res.status(200).json({ message: "Job post updated successfully", jobPost: updatedJob });
+  } catch (error) {
+    console.log("Error updating job post", error);
+    res.status(500).json({ message: "Error updating job post" });
+  }
+});
+
+
+//delete job-post
+app.delete("/jobs/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deletedJob = await PostJob.findByIdAndDelete(id);
+
+    if (!deletedJob) {
+      return res.status(404).json({ message: "Job post not found" });
+    }
+
+    res.status(200).json({ message: "Job post deleted successfully" });
+  } catch (error) {
+    console.log("Error deleting job post", error);
+    res.status(500).json({ message: "Error deleting job post" });
+  }
+});
+
+
+//apply jobs
+app.post("/jobs/:id/apply", async (req, res) => {
+  try {
+    const { id } = req.params; // Job ID
+    const { userId } = req.body; // Applicant's user ID
+
+    // Find the job post
+    const jobPost = await PostJob.findById(id);
+    if (!jobPost) {
+      return res.status(404).json({ message: "Job post not found" });
+    }
+
+    // Check if the user has already applied
+    if (jobPost.applicants.includes(userId)) {
+      return res.status(400).json({ message: "You have already applied for this job" });
+    }
+
+    // Add the applicant's user ID to the applicants array
+    jobPost.applicants.push(userId);
+    await jobPost.save();
+
+    res.status(200).json({ message: "Application submitted successfully" });
+  } catch (error) {
+    console.log("Error applying for job", error);
+    res.status(500).json({ message: "Error applying for job" });
+  }
+});
+
+//fetch the list of applicants for a specific job post:
+app.get("/jobs/:id/applicants", async (req, res) => {
+  try {
+    const { id } = req.params; // Job ID
+
+    // Find the job post and populate the applicants field
+    const jobPost = await PostJob.findById(id).populate("applicants", "name profileImage");
+
+    if (!jobPost) {
+      return res.status(404).json({ message: "Job post not found" });
+    }
+
+    res.status(200).json({ applicants: jobPost.applicants });
+  } catch (error) {
+    console.log("Error fetching applicants", error);
+    res.status(500).json({ message: "Error fetching applicants" });
+  }
+});
 
 // Send a connection request
 app.post("/connection-request", async (req, res) => {
@@ -369,6 +477,26 @@ app.get("/all", async (req, res) => {
 
 app.listen(port, () => {
   console.log("Server is running on port 3000");
+});
+
+
+// Endpoint to fetch a specific job post by ID
+app.get("/jobs/:id", async (req, res) => {
+  try {
+    const jobId = req.params.id;
+
+    // Find the job post by ID and populate the user field
+    const jobPost = await PostJob.findById(jobId).populate("user", "name profileImage");
+
+    if (!jobPost) {
+      return res.status(404).json({ message: "Job post not found" });
+    }
+
+    res.status(200).json({ jobPost });
+  } catch (error) {
+    console.log("Error fetching job post", error);
+    res.status(500).json({ message: "Error fetching job post" });
+  }
 });
 
 // User's profile update endpoint

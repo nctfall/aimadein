@@ -72,6 +72,7 @@ app.post("/register", async (req, res) => {
   }
 });
 
+//Send verification email via gmail SMTP
 const sendVerificationEmail = async (email, verificationToken) => {
   const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -85,7 +86,7 @@ const sendVerificationEmail = async (email, verificationToken) => {
     from: "aaimadein@gmail.com",
     to: email,
     subject: "Email Verification",
-    text: `Please click the following link to verify your email: http://localhost:3000/verify/${verificationToken}`,
+    text: `Please click the following link to verify your email: http://192.168.2.34:3000/verify/${verificationToken}`,
   };
 
   // Send the mail
@@ -142,7 +143,7 @@ app.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid password" });
     }
 
-    const token = jwt.sign({ userId: user._id }, secretKey);
+    const token = jwt.sign({ userId: user._id, userType: user.userType, userName:user.name }, secretKey);
 
     res.status(200).json({ token });
   } catch (error) {
@@ -150,7 +151,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// User's profile
+// GET User's profile
 app.get("/profile/:userId", async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -166,7 +167,7 @@ app.get("/profile/:userId", async (req, res) => {
   }
 });
 
-//fetch users
+//GET users
 app.get("/users/:userId", async (req, res) => {
   try {
     const loggedInUserId = req.params.userId;
@@ -197,43 +198,8 @@ app.get("/users/:userId", async (req, res) => {
   }
 });
 
-// Endpoint to create a job post
-/*app.post("/create-job", async (req, res) => {
-  try {
-    const { jobTitle, jobDescription, skills, salary, userId } = req.body;
 
-    // Ensure that only companies can post jobs
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(400).json({ message: "User not found" });
-    }
-
-    if (user.userType !== 'company') {
-      return res.status(403).json({ message: "Only companies can post jobs" });
-    }
-
-    const newJobPost = new PostJob({
-      jobTitle,
-      jobDescription,
-      skills,
-      salary,
-      createdAt: Date.now(),
-    });
-
-    // Save the job post
-    await newJobPost.save();
-
-    res.status(201).json({
-      message: "Job post created successfully",
-      jobPost: newJobPost,
-    });
-  } catch (error) {
-    console.log("Error creating job post", error);
-    res.status(500).json({ message: "Error creating job post" });
-  }
-});
-*/
-
+//POST job posts
 app.post("/create-job", async (req, res) => {
   try {
     const { jobTitle, jobDescription, skills, salary, userId } = req.body;
@@ -253,6 +219,7 @@ app.post("/create-job", async (req, res) => {
       jobDescription,
       skills,
       salary,
+      user,  ///// updated userid to user
       createdAt: Date.now(),
     });
 
@@ -270,12 +237,29 @@ app.post("/create-job", async (req, res) => {
 });
 
 
-
-
-// Endpoint to fetch all job posts
+//get all jobs
 app.get("/all-jobs", async (req, res) => {
   try {
-    const jobPosts = await PostJob.find(); // You can also populate other fields if needed
+    const { userId } = req.query; // Get userId from query params
+
+    console.log("Fetching jobs for userId:", userId); // Log the userId
+
+    let jobPosts;
+    if (userId) {
+      // Fetch jobs posted by a specific user (company) and populate user details
+      jobPosts = await PostJob.find({ user: userId })
+        .populate("user", "name profileImage") // Populate user details
+        .sort({ createdAt: -1 });
+
+      console.log("Jobs for company:", jobPosts); // Log the fetched jobs
+    } else {
+      // Fetch all jobs and populate user details
+      jobPosts = await PostJob.find()
+        .populate("user", "name profileImage") // Populate user details
+        .sort({ createdAt: -1 });
+
+      console.log("All jobs:", jobPosts); // Log all jobs
+    }
 
     res.status(200).json({ jobPosts });
   } catch (error) {
@@ -283,6 +267,80 @@ app.get("/all-jobs", async (req, res) => {
     res.status(500).json({ message: "Error fetching all job posts" });
   }
 });
+
+//edit job-post
+app.put("/jobs/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { jobTitle, jobDescription, skills, salary } = req.body;
+
+    const updatedJob = await PostJob.findByIdAndUpdate(
+      id,
+      { jobTitle, jobDescription, skills, salary },
+      { new: true }
+    );
+
+    if (!updatedJob) {
+      return res.status(404).json({ message: "Job post not found" });
+    }
+
+    res.status(200).json({ message: "Job post updated successfully", jobPost: updatedJob });
+  } catch (error) {
+    console.log("Error updating job post", error);
+    res.status(500).json({ message: "Error updating job post" });
+  }
+});
+
+
+//delete job-post
+app.delete("/jobs/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deletedJob = await PostJob.findByIdAndDelete(id);
+
+    if (!deletedJob) {
+      return res.status(404).json({ message: "Job post not found" });
+    }
+
+    res.status(200).json({ message: "Job post deleted successfully" });
+  } catch (error) {
+    console.log("Error deleting job post", error);
+    res.status(500).json({ message: "Error deleting job post" });
+  }
+});
+
+
+//apply jobs
+// Add this endpoint to your backend (e.g., in your Express app)
+app.post("/jobs/:id/apply", async (req, res) => {
+  try {
+    const { id } = req.params; // Job ID
+    const { userId } = req.body; // Applicant's user ID
+
+    // Find the job post
+    const jobPost = await PostJob.findById(id);
+    if (!jobPost) {
+      return res.status(404).json({ message: "Job post not found" });
+    }
+
+    // Check if the user has already applied
+    if (jobPost.applicants.includes(userId)) {
+      return res.status(400).json({ message: "You have already applied for this job" });
+    }
+
+    // Add the applicant's user ID to the applicants array
+    jobPost.applicants.push(userId);
+    await jobPost.save();
+
+    res.status(200).json({ message: "Application submitted successfully" });
+  } catch (error) {
+    console.log("Error applying for job", error);
+    res.status(500).json({ message: "Error applying for job" });
+  }
+});
+
+
 
 // Send a connection request
 app.post("/connection-request", async (req, res) => {
@@ -405,34 +463,25 @@ app.listen(port, () => {
   console.log("Server is running on port 3000");
 });
 
-// User's profile update endpoint
-/*app.put("/profile/:userId", async (req, res) => {
+
+// Endpoint to fetch a specific job post by ID
+app.get("/job/:id", async (req, res) => {
   try {
-    const { userId } = req.params;
-    const { userDescription, skills, workExperience, education, address } = req.body;
+    const jobId = req.params.id;
 
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    // Find the job post by ID and populate the user field
+    const jobPost = await PostJob.findById(jobId).populate("user", "name profileImage");
+
+    if (!jobPost) {
+      return res.status(404).json({ message: "Job post not found" });
     }
 
-    // Only allow updates for 'employee' user type
-    if (user.userType === 'employee') {
-      user.userDescription = userDescription;
-      user.skills = skills || user.skills;
-      user.workExperience = workExperience || user.workExperience;
-      user.education = education || user.education;
-
-      await user.save();
-      res.status(200).json({ message: "Profile updated successfully", user });
-    } else {
-      res.status(400).json({ message: "Only employees can update these fields" });
-    }
+    res.status(200).json({ jobPost });
   } catch (error) {
-    console.log("Error updating user profile", error);
-    res.status(500).json({ message: "Error updating user profile" });
+    console.log("Error fetching job post", error);
+    res.status(500).json({ message: "Error fetching job post" });
   }
-});*/
+});
 
 // User's profile update endpoint
 app.put("/profile/:userId", async (req, res) => {

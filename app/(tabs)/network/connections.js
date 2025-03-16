@@ -82,7 +82,7 @@ const connections = () => {
               </Text>
 
               <Text style={{ color: "gray" }}>
-                B.Tech | Computer Science Technology
+                B.Tech | Computer Science Technology   {{/* temp hard coded, fetch user.userDescription */}}
               </Text>
 
               <Text style={{ color: "gray" }}>

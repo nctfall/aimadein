@@ -7,8 +7,7 @@ import {
   KeyboardAvoidingView,
   TextInput,
   Pressable,
-  ScrollView,
-  Alert,
+  LinearGradient,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { AntDesign } from "@expo/vector-icons";
@@ -24,12 +23,6 @@ const login = () => {
   const [password, setPassword] = useState("");
   const [imageUri, setImageUri] = useState(null);  // State to store image URI
   const router = useRouter();
-
-  // Email validation function
-  const validateEmail = (email) => {
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    return emailRegex.test(email);
-  };
 
   // Check if the user is already logged in
   useEffect(() => {
@@ -63,20 +56,10 @@ const login = () => {
 
   // Handle login function
   const handleLogin = () => {
-    // Validate email before login
-    if (!validateEmail(email)) {
-      Alert.alert(
-        "Invalid Email",  // Title of the alert
-        "Please enter a valid email address.",  // Message of the alert
-        [{ text: "OK" }]  // Button to close the alert
-      );
-      return;  // Stop the login process if email is invalid
-    }
-
-    const user = {
-      email: email,
-      password: password
-    };
+      const user = {
+          email: email,
+          password: password
+      };
 
       axios.post("http://192.168.2.34:3000/login", user).then((response) => {
           console.log(response);
@@ -84,18 +67,13 @@ const login = () => {
           AsyncStorage.setItem("authToken", token);
           router.replace("/(tabs)/home");
       }).catch((error) => {
-        Alert.alert(
-          "Login Failed",  // Title of the alert
-          "Incorrect email or password. Please try again.",  // Message of the alert
-          [{ text: "OK" }]  // Button to close the alert
-        );
+          console.log("Login error:", error);
       });
   };
 
   return (
     
     <SafeAreaView style={{ flex: 1, backgroundColor: "black", alignItems: "center", justifyContent: 'flex-start' }}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1, alignItems: "center", justifyContent: "flex-start" }}>
       <View style={{ width:350 }}>
         {imageUri ? (
           <Image
@@ -181,7 +159,6 @@ const login = () => {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
-      </ScrollView>
     </SafeAreaView>
   );
 };
