@@ -5,7 +5,7 @@ import {
   ScrollView,
   Image,
   Pressable,
-  TextInput,
+  TextInput
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -17,22 +17,38 @@ import * as FileSystem from "expo-file-system";
 import { firebase } from "../../../firebase";
 import axios from "axios";
 import { useRouter } from "expo-router";
+import { AntDesign } from "@expo/vector-icons";
 
 const index = () => {
   const [description, setDescription] = useState("");
   const [image, setImage] = useState("");
   const [userId, setUserId] = useState("");
+  const [userType, setUserType] = useState("");  // Add userType state
+  const [jobTitle, setJobTitle] = useState(""); // State for company job title
+  const [skills, setSkills] = useState(""); // State for company skills
+  const [salary, setSalary] = useState(""); // State for company salary
+  const [jobDescription, setJobDescription] = useState(""); // State for company job description
   const router = useRouter();
+  const [user, setUser] = useState();
+
   useEffect(() => {
     const fetchUser = async () => {
       const token = await AsyncStorage.getItem("authToken");
       const decodedToken = jwt_decode(token);
+      console.log("Decoded Token: ", decodedToken); // Log the entire decoded token
+      
       const userId = decodedToken.userId;
+      const userName = decodedToken.name;
+      const userType = decodedToken.userType;  // This is where 'undefined' is coming from
       setUserId(userId);
+      setUserType(userType);  // Store the userType in the state
+  
+      console.log("Fetched userType: ", userType); // Confirm userType
     };
-
+  
     fetchUser();
   }, []);
+
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.All,
@@ -46,18 +62,30 @@ const index = () => {
       setImage(result.assets[0].uri);
     }
   };
+
   const createPost = async () => {
     try {
-      const uploadedUrl = await uploadFile();
+      const uploadedUrl = userType === "employee" ? await uploadFile() : ""; // Only upload image if employee
+      let postData;
 
-      const postData = {
-        description: description,
-        imageUrl: uploadedUrl,
-        userId: userId,
-      };
+      if (userType === "employee") {
+        postData = {
+          description: description,
+          imageUrl: uploadedUrl,
+          userId: userId,
+        };
+      } else if (userType === "company") {
+        postData = {
+          jobTitle: jobTitle,
+          jobDescription: jobDescription,
+          skills: skills,
+          salary: salary,
+          userId: userId,
+        };
+      }
 
       const response = await axios.post(
-        "http://localhost:3000/create",
+        userType === "employee" ? "http://192.168.2.34:3000/create" : "http://192.168.2.34:3000/create-job",
         postData
       );
 
@@ -69,9 +97,9 @@ const index = () => {
       console.log("error creating post", error);
     }
   };
+
   const uploadFile = async () => {
     try {
-      // Ensure that 'image' contains a valid file URI
       console.log("Image URI:", image);
 
       const { uri } = await FileSystem.getInfoAsync(image);
@@ -79,6 +107,7 @@ const index = () => {
       if (!uri) {
         throw new Error("Invalid file URI");
       }
+      const filename = uri.split('/').pop();
 
       const blob = await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -93,127 +122,266 @@ const index = () => {
         xhr.send(null);
       });
 
-      const filename = image.substring(image.lastIndexOf("/") + 1);
-
-      const ref = firebase.storage().ref().child(filename);
+      //const filename = image.substring(image.lastIndexOf("/") + 1);
+      //const ref = firebase.storage().ref().child(filename);
+      const ref = firebase.storage().ref().child(`post/${filename}`);
       await ref.put(blob);
 
       const downloadURL = await ref.getDownloadURL();
-      // setUrl(downloadURL);
       return downloadURL;
-      // Alert.alert("Photo uploaded");
     } catch (error) {
       console.log("Error:", error);
-      // Handle the error or display a user-friendly message
     }
   };
-  return (
-    <ScrollView style={{ flex: 1, backgroundColor: "white" }}>
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-around",
-          marginVertical: 12,
-        }}
-      >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Entypo name="circle-with-cross" size={24} color="black" />
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
-            <Image
-              style={{ width: 40, height: 40, borderRadius: 20 }}
-              source={{
-                uri: "https://media.licdn.com/dms/image/D5603AQFeh_NknN-g3Q/profile-displayphoto-shrink_400_400/0/1689263297492?e=1703116800&v=beta&t=jl59Svp5msDE8_VQat4kFFZLGUm1RPTyRK3IMMJrxpg",
-              }}
-            />
-            <Text style={{ fontWeight: "500" }}>Anyone</Text>
-          </View>
-        </View>
 
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 10,
-            marginRight: 8,
-          }}
-        >
-          <Entypo name="back-in-time" size={24} color="black" />
-          <Pressable
-            onPress={createPost}
-            style={{
-              padding: 10,
-              backgroundColor: "#0072b1",
-              borderRadius: 20,
-              width: 80,
-            }}
-          >
-            <Text
-              style={{
-                textAlign: "center",
-                color: "white",
-                fontWeight: "bold",
-              }}
-            >
-              Post
-            </Text>
-          </Pressable>
-        </View>
+  const logout = async () => {
+    await AsyncStorage.removeItem("authToken");
+    router.replace("/(authenticate)/login");
+  };
+
+
+   // Fetch User
+   useEffect(() => {
+    const fetchUser = async () => {
+      const token = await AsyncStorage.getItem("authToken");
+      const decodedToken = jwt_decode(token);
+      const userId = decodedToken.userId;
+      setUserId(userId);
+    };
+
+    fetchUser();
+  }, []);
+
+  useEffect(() => {
+    if (userId) {
+      fetchUserProfile();
+    }
+  }, [userId]);
+
+  // Fetch User Profile
+  const fetchUserProfile = async () => {
+    try {
+      const response = await axios.get(
+        `http://192.168.2.34:3000/profile/${userId}`
+      );
+      const userData = response.data.user;
+      setUser(userData);
+    } catch (error) {
+      console.log("Error fetching user profile", error);
+    }
+  };
+
+  return (
+    <ScrollView style={styles.container}>
+      
+
+      <View
+  style={{
+    padding: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    position: 'relative', 
+  }}
+>
+  <Pressable onPress={() => router.push("/home/profile")}>
+    <Image
+      style={{ width: 30, height: 30, borderRadius: 15 }}
+      source={{ uri: user?.profileImage }}
+    />
+  </Pressable>
+    <Text style={{ fontSize: 18, fontWeight: "600" }}>
+       {user?.name}
+    </Text>
+
+  {/* This is the logout container */}
+  <Pressable onPress={logout} style={[styles.logoutContainer, { position: 'absolute', top: 10, right: 10 }]}>
+    <AntDesign name="logout" size={22} color="black" />
+    <Text style={styles.logoutText}>Logout</Text>
+  </Pressable>
+  </View>
+ 
+  <View style={styles.divider} />
+   
+      <View style={styles.topBar}>
+        <Text style={styles.headerText}>Post</Text>
       </View>
 
-      <TextInput
-        value={description}
-        onChangeText={(text) => setDescription(text)}
-        placeholder="What do you want to talk about"
-        placeholderTextColor={"black"}
-        style={{
-          marginHorizontal: 10,
-          fontSize: 15,
-          fontWeight: "500",
-          marginTop: 10,
-        }}
-        multiline={true}
-        numberOfLines={10}
-        textAlignVertical={"top"}
-      />
-
-      <View>
-        {image && (
-          <Image
-            source={{ uri: image }}
-            style={{ width: "100%", height: 240, marginVertical: 20 }}
+      <View style={styles.formContainer}>
+        {/* Conditionally Render Fields Based on User Type */}
+        {userType === "employee" ? (
+          <TextInput
+            value={description}
+            onChangeText={(text) => setDescription(text)}
+            placeholder="What do you want to talk about?"
+            placeholderTextColor={"#7D7D7D"}
+            style={[styles.textInputEmployee, { backgroundColor: 'white' }]}
+            multiline={true}
+            numberOfLines={10}
+            textAlignVertical={"top"}
           />
+        ) : (
+          <>
+            <TextInput
+              value={jobTitle}
+              onChangeText={(text) => setJobTitle(text)}
+              placeholder="Job Title"
+              placeholderTextColor={"#7D7D7D"}
+              style={[styles.textInputCompany, { backgroundColor: 'white' }]}
+            />
+            <TextInput
+              value={skills}
+              onChangeText={(text) => setSkills(text)}
+              placeholder="Skills"
+              placeholderTextColor={"#7D7D7D"}
+              style={[styles.textInputCompany, { backgroundColor: 'white' }]}
+            />
+            <TextInput
+              value={salary}
+              onChangeText={(text) => setSalary(text)}
+              placeholder="Salary"
+              placeholderTextColor={"#7D7D7D"}
+              style={[styles.textInputCompany, { backgroundColor: 'white' }]}
+            />
+            <TextInput
+              value={jobDescription}
+              onChangeText={(text) => setJobDescription(text)}
+              placeholder="Job Description"
+              placeholderTextColor={"#7D7D7D"}
+              style={[styles.textInputCompany, { backgroundColor: 'white' }]}
+              numberOfLines={10}
+              textAlignVertical={"top"}
+            />
+          </>
         )}
       </View>
 
-      <Pressable
-        style={{
-          flexDirection: "coloumn",
-          marginRight: "auto",
-          marginLeft: "auto",
-        }}
-      >
+      {/* Image Picker for Employee */}
+      {userType === 'employee' && (
         <Pressable
           onPress={pickImage}
-          style={{
-            widt: 40,
-            height: 40,
-            marginTop: 15,
-            backgroundColor: "#E0E0E0",
-            borderRadius: 20,
-            justifyContent: "center",
-            alignItems: "center",
-          }}
+          style={styles.imagePickerButton}
         >
           <MaterialIcons name="perm-media" size={24} color="black" />
+          <Text style={styles.imagePickerText}>Upload Image</Text>
         </Pressable>
-
-        <Text>Media</Text>
+      )}
+      <Text></Text>
+      {/* Post Button at the Bottom */}
+      <Pressable
+        onPress={createPost}
+        style={styles.postButton}
+        
+      >
+        <Text style={styles.postButtonText}>
+          {userType === 'employee' ? 'Post' : 'Post Job'}
+        </Text>
       </Pressable>
     </ScrollView>
   );
 };
 
-export default index;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    //backgroundColor: "white",
+  },
+  topBar: {
+    marginTop: 10,
+    marginHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerText: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  logoutContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  logoutText: {
+    marginLeft: 5,
+    fontSize: 16,
+    fontWeight: "500",
+    color: "black",
+  },
+  divider: {
+    borderColor: "#E0E0E0",
+    borderWidth: 1,
+    marginVertical: 15,
+  },
+  formContainer: {
+    marginHorizontal: 16,
+    marginVertical: 10,
+  },
+  userInfoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  profileImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  userName: {
+    fontWeight: "500",
+    fontSize: 16,
+  },
+  textInputEmployee: {
+    fontSize: 16,
+    fontWeight: "500",
+    marginVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderColor: "#E0E0E0",
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  textInputCompany: {
+    fontSize: 16,
+    fontWeight: "500",
+    marginVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderColor: "#E0E0E0",
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  imagePickerButton: {
+    width: 200,
+    height: 40,
+    backgroundColor: "#E0E0E0",
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 10,
+    alignSelf: "center",
+    flexDirection: "row",
+  },
+  imagePickerText: {
+    fontSize: 16,
+    marginLeft: 10,
+    color: "black",
+  },
+  postButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: "#0072b1",
+    borderRadius: 20,
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  postButtonText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+});
 
-const styles = StyleSheet.create({});
+export default index;

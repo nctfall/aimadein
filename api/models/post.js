@@ -35,6 +35,7 @@ const postSchema = new mongoose.Schema({
     }
 });
 
+// Create a model for the user schema
 const Post = mongoose.model("Post",postSchema);
 
 module.exports = Post

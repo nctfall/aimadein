@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "linkedin-yt",
-    "slug": "linkedin-yt",
+    "name": "aimadeinafrica",
+    "slug": "aimadeinafrica",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -17,7 +17,7 @@
     "ios": {
       "supportsTablet": true
     },
-    "scheme": "linkedin-yt",
+    "scheme": "aimadeinafrica",
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",

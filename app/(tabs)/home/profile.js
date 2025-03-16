@@ -4,27 +4,44 @@ import {
   View,
   Pressable,
   Image,
-  Button,
   TextInput,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "expo-router";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import jwt_decode from "jwt-decode";
-import {
-  Ionicons,
-  Entypo,
-  Feather,
-  FontAwesome,
-  AntDesign,
-} from "@expo/vector-icons";
+import { Ionicons, AntDesign } from "@expo/vector-icons";
 
-const profile = () => {
+// Format date function to display month name
+const formatDate = (isoDate) => {
+  const date = new Date(isoDate);
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long", // 'long' for full month name (e.g., "January")
+    day: "2-digit",
+  });
+};
+
+const Profile = () => {
   const [userId, setUserId] = useState("");
-  const [user, setUser] = useState();
+  const [user, setUser] = useState(null);
   const router = useRouter();
   const [userDescription, setUserDescription] = useState("");
+  const [skills, setSkills] = useState("");
+  const [workExperience, setWorkExperience] = useState([]);
+  const [address, setAddress] = useState({
+    street: "",
+    city: "",
+    state: "",
+    country: "",
+  });
+  const [education, setEducation] = useState([]);
+  const [isEditing, setIsEditing] = useState(false);
+
   useEffect(() => {
     const fetchUser = async () => {
       const token = await AsyncStorage.getItem("authToken");
@@ -35,238 +52,402 @@ const profile = () => {
 
     fetchUser();
   }, []);
+
   useEffect(() => {
     if (userId) {
       fetchUserProfile();
     }
   }, [userId]);
+
   const fetchUserProfile = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:3000/profile/${userId}`
+        `http://192.168.2.34:3000/profile/${userId}`
       );
       const userData = response.data.user;
       setUser(userData);
+      setSkills(userData.skills?.join(", ") || "");
+      setWorkExperience(userData.workExperience?.map(work => ({
+        ...work,
+        startDate: work.startDate ? new Date(work.startDate).toISOString().slice(0, 10) : "",
+        endDate: work.endDate ? new Date(work.endDate).toISOString().slice(0, 10) : ""
+      })) || []);
+      setAddress(userData.address || {
+        street: "",
+        city: "",
+        state: "",
+        country: "",
+      });
+      setEducation(userData.education?.map(education => ({
+        ...education,
+        yearOfGraduation: education.yearOfGraduation?.toString() || ""
+      })) || []);
+      setUserDescription(userData.userDescription || "");
     } catch (error) {
-      console.log("error fetching user profile", error);
+      console.log("Error fetching user profile", error);
+      Alert.alert("Error", "Failed to fetch user profile. Please try again.");
     }
   };
-  const [isEditing, setIsEditing] = useState(false);
+  
+  
+
   const handleSaveDescription = async () => {
     try {
+      const payload = {
+        userDescription,
+        skills: skills.split(",").map((skill) => skill.trim()),
+        workExperience,
+        address,
+        education: education.map(item => ({
+          ...item,
+          yearOfGraduation: item.yearOfGraduation ? parseInt(item.yearOfGraduation, 10) : null,
+        })),
+      };
+  
       const response = await axios.put(
-        `http://localhost:3000/profile/${userId}`,
-        {
-          userDescription,
-        }
+        `http://192.168.2.34:3000/profile/${userId}`,
+        payload
       );
-
+  
       if (response.status === 200) {
         await fetchUserProfile();
-
         setIsEditing(false);
+        Alert.alert("Success", "Profile updated successfully!");
       }
     } catch (error) {
       console.log("Error saving user description", error);
+      Alert.alert("Error", "Failed to save profile. Please try again.");
     }
   };
-  const logout = () => {
-    clearAuthToken();
-  };
-  const clearAuthToken = async () => {
+  
+
+  const logout = async () => {
     await AsyncStorage.removeItem("authToken");
-    console.log("auth token cleared");
     router.replace("/(authenticate)/login");
   };
+
+  const addWorkExperience = () => {
+    setWorkExperience([...workExperience, { companyName: "", jobTitle: "", startDate: "", endDate: "", responsibilities: "" }]);
+  };
+
+  const addEducation = () => {
+    setEducation([...education, { degree: "", institution: "", yearOfGraduation: "", fieldOfStudy: "" }]);
+  };
+
+  const handleWorkExperienceChange = (index, field, value) => {
+    const newWorkExperience = [...workExperience];
+    newWorkExperience[index][field] = value;
+    setWorkExperience(newWorkExperience);
+  };
+
+  const handleEducationChange = (index, field, value) => {
+    const newEducation = [...education];
+    newEducation[index][field] = value;
+    setEducation(newEducation);
+  };
+
+  const handleAddressChange = (field, value) => {
+    setAddress({ ...address, [field]: value });
+  };
+
+  if (!user) {
+    return <Text>Loading...</Text>;
+  }
+
   return (
-    <View>
-      <View
-        style={{
-          padding: 10,
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 4,
-        }}
-      >
-        <Pressable>
-          <Image
-            style={{ width: 30, height: 30, borderRadius: 15 }}
-            source={{ uri: user?.profileImage }}
-          />
-        </Pressable>
+    <ScrollView style={{ flex: 1, backgroundColor: "#F8F8F8" }}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+        <Pressable onPress={() => router.back()} style={styles.profilePicWrapper}>
+        <Ionicons name="arrow-back" size={24} color="black" />
+            <Image style={styles.profilePic} source={{ uri: user?.profilePic }} />
+          </Pressable>
 
-        <Pressable
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            marginHorizontal: 7,
-            gap: 10,
-            backgroundColor: "white",
-            borderRadius: 3,
-            height: 30,
-            flex: 1,
-          }}
-        >
-          <AntDesign
-            style={{ marginLeft: 10 }}
-            name="search1"
-            size={20}
-            color="black"
-          />
-          <TextInput placeholder="Search" />
-        </Pressable>
+          <View style={styles.searchBar}>
+            <AntDesign name="search1" size={20} color="gray" />
+            <TextInput style={styles.searchInput} placeholder="Search" />
+          </View>
 
-        <Ionicons name="chatbox-ellipses-outline" size={24} color="black" />
-      </View>
+          <Ionicons name="chatbox-ellipses-outline" size={24} color="black" />
+        </View>
 
-      <Image
-        style={{ width: "100%", height: 130 }}
-        source={{
-          uri: "https://media.istockphoto.com/id/937025430/photo/abstract-defocused-blue-soft-background.jpg?b=1&s=612x612&w=0&k=20&c=FwJnRNxkX_lZKImOoJbo5VsgZPCMNiODdsRsggJqejA=",
-        }}
-      />
-
-      <View style={{ position: "absolute", top: 130, left: 10 }}>
         <Image
-          style={{ width: 120, height: 120, borderRadius: 60 }}
-          source={{ uri: user?.profileImage }}
+          style={styles.coverImage}
+          source={{
+            uri: "https://media.istockphoto.com/id/937025430/photo/abstract-defocused-blue-soft-background.jpg?b=1&s=612x612&w=0&k=20&c=FwJnRNxkX_lZKImOoJbo5VsgZPCMNiODdsRsggJqejA=",
+          }}
         />
-      </View>
 
-      <View style={{ marginTop: 80, marginHorizontal: 10 }}>
-        <Text style={{ fontSize: 17, fontWeight: "bold" }}>{user?.name}</Text>
-        <Pressable onPress={() => setIsEditing(!isEditing)}>
-          <Text>{user?.userDescription ? "Edit" : "Add Bio"}</Text>
-        </Pressable>
+        <View style={styles.profileDetails}>
+          <Text style={styles.name}>{user?.name}</Text>
+          <Pressable onPress={() => setIsEditing(!isEditing)}>
+            <Text style={styles.editText}>{user?.userDescription ? "Edit" : "Add Bio"}</Text>
+          </Pressable>
 
-        <View>
-          {isEditing ? (
-            <>
-              <TextInput
-                placeholder="enter your description"
-                value={userDescription}
-                onChangeText={(text) => setUserDescription(text)}
-              />
+          <View style={styles.bioContainer}>
+            {isEditing ? (
+              <>
+                <TextInput
+                  style={styles.inputField}
+                  placeholder="Enter your description"
+                  value={userDescription}
+                  onChangeText={(text) => setUserDescription(text)}
+                />
+                <TextInput
+                  style={styles.inputField}
+                  placeholder="Enter your skills (comma separated)"
+                  value={skills}
+                  onChangeText={(text) => setSkills(text)}
+                />
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Work Experience:</Text>
+                  {workExperience.map((item, index) => (
+                    <View key={index}>
+                      
+                      <TextInput
+                        style={styles.inputField}
+                        placeholder="Company Name"
+                        value={item.companyName}
+                        onChangeText={(text) => handleWorkExperienceChange(index, "companyName", text)}
+                      />
+                      <TextInput
+                        style={styles.inputField}
+                        placeholder="Job Title"
+                        value={item.jobTitle}
+                        onChangeText={(text) => handleWorkExperienceChange(index, "jobTitle", text)}
+                      />
+                    <TextInput
+                   style={styles.inputField}
+                   placeholder="Start Date (yyyy-mm-dd)"
+                   value={item.startDate} // This will now display the formatted date
+                   onChangeText={(text) => handleWorkExperienceChange(index, "startDate", text)}
+                  />
+                <TextInput
+                style={styles.inputField}
+                placeholder="End Date (yyyy-mm-dd)"
+                value={item.endDate} // This will now display the formatted date
+                onChangeText={(text) => handleWorkExperienceChange(index, "endDate", text)}
+                />
+                      <TextInput
+                        style={styles.inputField}
+                        placeholder="Responsibilities"
+                        value={item.responsibilities}
+                        onChangeText={(text) => handleWorkExperienceChange(index, "responsibilities", text)}
+                      />
+                    </View>
+                  ))}
+                  <TouchableOpacity
+                    style={styles.addButton}
+                    onPress={addWorkExperience}
+                  >
+                    <Text style={styles.addButtonText}>+ Add Work Experience</Text>
+                  </TouchableOpacity>
+                </View>
 
-              <Button onPress={handleSaveDescription} title="Save" />
-            </>
-          ) : (
-            <Text>{user?.userDescription}</Text>
-          )}
-        </View>
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Education:</Text>
+                  {education.map((item, index) => (
+                    <View key={index}>
+                      <TextInput
+                        style={styles.inputField}
+                        placeholder="Degree"
+                        value={item.degree}
+                        onChangeText={(text) => handleEducationChange(index, "degree", text)}
+                      />
+                      <TextInput
+                        style={styles.inputField}
+                        placeholder="Institution"
+                        value={item.institution}
+                        onChangeText={(text) => handleEducationChange(index, "institution", text)}
+                      />
+                      <TextInput
+                        style={styles.inputField}
+                        placeholder="Year of Graduation"
+                        value={item.yearOfGraduation}
+                        onChangeText={(text) => handleEducationChange(index, "yearOfGraduation", text)}
+                      />
+                      <TextInput
+                        style={styles.inputField}
+                        placeholder="Field of Study"
+                        value={item.fieldOfStudy}
+                        onChangeText={(text) => handleEducationChange(index, "fieldOfStudy", text)}
+                      />
+                    </View>
+                  ))}
+                  <TouchableOpacity
+                    style={styles.addButton}
+                    onPress={addEducation}
+                  >
+                    <Text style={styles.addButtonText}>+ Add Education</Text>
+                  </TouchableOpacity>
+                </View>
 
-        <Text style={{ marginTop: 12, fontWeight: "500", fontSize: 15 }}>
-          Youtube • Linkedin Member
-        </Text>
-        <Text style={{ fontSize: 15, color: "gray" }}>
-          Bengaluru, Karnataka, India
-        </Text>
-      </View>
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Address:</Text>
+                  <TextInput
+                    style={styles.inputField}
+                    placeholder="Street"
+                    value={address.street}
+                    onChangeText={(text) => handleAddressChange("street", text)}
+                  />
+                  <TextInput
+                    style={styles.inputField}
+                    placeholder="City"
+                    value={address.city}
+                    onChangeText={(text) => handleAddressChange("city", text)}
+                  />
+                  <TextInput
+                    style={styles.inputField}
+                    placeholder="State"
+                    value={address.state}
+                    onChangeText={(text) => handleAddressChange("state", text)}
+                  />
+                  
+                  <TextInput
+                    style={styles.inputField}
+                    placeholder="Country"
+                    value={address.country}
+                    onChangeText={(text) => handleAddressChange("country", text)}
+                  />
+                </View>
 
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 10,
-          marginTop: 12,
-          marginHorizontal: 10,
-        }}
-      >
-        <Pressable
-          style={{
-            backgroundColor: "#0072b1",
-            paddingVertical: 4,
-            paddingHorizontal: 10,
-            borderRadius: 25,
-          }}
-        >
-          <Text style={{ color: "white", textAlign: "center" }}>Open to</Text>
-        </Pressable>
-        <Pressable
-          style={{
-            backgroundColor: "#0072b1",
-            paddingVertical: 4,
-            paddingHorizontal: 10,
-            borderRadius: 25,
-          }}
-        >
-          <Text style={{ color: "white", textAlign: "center" }}>
-            Add Section
-          </Text>
-        </Pressable>
-      </View>
-
-      <View style={{ marginHorizontal: 10, marginTop: 10 }}>
-        <Text style={{ fontSize: 17, fontWeight: "bold" }}>Analytics</Text>
-        <Text style={{ fontSize: 15, color: "gray", marginTop: 2 }}>
-          Private to you
-        </Text>
-
-        <View style={{ flexDirection: "row", gap: 7, marginTop: 10 }}>
-          <Ionicons name="people" size={28} color="black" />
-          <View style={{ marginLeft: 7 }}>
-            <Text style={{ fontSize: 15, fontWeight: "600" }}>
-              350 profile views
-            </Text>
-            <Text
-              style={{
-                fontSize: 15,
-                fontWeight: "500",
-                color: "gray",
-                marginTop: 1,
-              }}
-            >
-              Discover who's viewed your profile
-            </Text>
+                <TouchableOpacity style={styles.saveButton} onPress={handleSaveDescription}>
+                  <Text style={styles.saveButtonText}>Save</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.bioText}>{user?.userDescription || "Not provided"}</Text>
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Skills:</Text>
+                  <Text>{skills || "No skills"}</Text>
+                </View>
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Work Experience:</Text>
+                  {workExperience.map((item, index) => (
+                    <View key={index}>
+                      <Text>Comany Name: {item.companyName}</Text>
+                      <Text>    Job Title: {item.jobTitle}</Text>
+                      <Text>    Start Date: {formatDate(item.startDate)}</Text> 
+                      <Text>    End Date: {formatDate(item.endDate)}</Text>
+                      <Text>Job Responsibilities: {item.responsibilities}</Text>
+                    </View>
+                  ))}
+                </View>
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Education:</Text>
+                  {education.map((item, index) => (
+                    <View key={index}>
+                      <Text>Degree:  {item.degree}</Text>
+                      <Text>School:  {item.institution}</Text>
+                      <Text>Competion Year:{item.yearOfGraduation}</Text>
+                      <Text>Field of Study:  {item.fieldOfStudy}</Text>
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
           </View>
         </View>
-
-        <View style={{ flexDirection: "row", gap: 7, marginTop: 10 }}>
-          <Entypo name="bar-graph" size={24} color="black" />
-          <View style={{ marginLeft: 7 }}>
-            <Text style={{ fontSize: 15, fontWeight: "600" }}>
-              1242 post Impressions
-            </Text>
-            <Text
-              style={{
-                fontSize: 15,
-                fontWeight: "500",
-                color: "gray",
-                marginTop: 1,
-              }}
-            >
-              Checkout who's engaing with your posts
-            </Text>
-          </View>
-        </View>
-
-        <View style={{ flexDirection: "row", gap: 7, marginTop: 10 }}>
-          <Feather name="search" size={24} color="black" />
-          <View style={{ marginLeft: 7 }}>
-            <Text style={{ fontSize: 15, fontWeight: "600" }}>
-              45 post appearenced
-            </Text>
-            <Text
-              style={{
-                fontSize: 15,
-                fontWeight: "500",
-                color: "gray",
-                marginTop: 1,
-              }}
-            >
-              see how often you appear in search results
-            </Text>
-          </View>
-        </View>
       </View>
-
-      <Pressable onPress={logout}>
-        <Text>Logout</Text>
-      </Pressable>
-    </View>
+    </ScrollView>
   );
 };
 
-export default profile;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#F8F8F8",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingTop: 10,
+    paddingHorizontal: 20,
+  },
+  profilePicWrapper: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    overflow: "hidden",
+  },
+  profilePic: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 25,
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    paddingHorizontal: 10,
+    borderRadius: 15,
+    width: 200,
+  },
+  searchInput: {
+    marginLeft: 10,
+    width: "100%",
+  },
+  coverImage: {
+    width: "100%",
+    height: 150,
+    resizeMode: "cover",
+  },
+  profileDetails: {
+    padding: 20,
+  },
+  name: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  editText: {
+    color: "#007BFF",
+    fontSize: 16,
+  },
+  bioContainer: {
+    marginTop: 20,
+  },
+  inputField: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 5,
+    padding: 10,
+    marginVertical: 5,
+    backgroundColor: "#fff",
+  },
+  section: {
+    marginTop: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  addButton: {
+    backgroundColor: "#007BFF",
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 10,
+  },
+  addButtonText: {
+    color: "#fff",
+    textAlign: "center",
+  },
+  saveButton: {
+    backgroundColor: "#28A745",
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 20,
+  },
+  saveButtonText: {
+    color: "#fff",
+    textAlign: "center",
+  },
+  bioText: {
+    fontSize: 16,
+    color: "#666",
+  },
+});
 
-const styles = StyleSheet.create({});
+export default Profile;

@@ -30,7 +30,7 @@ const connections = () => {
   const fetchConnections = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:3000/connections/${userId}`
+        `http://192.168.2.34:3000/connections/${userId}`
       );
       setConnections(response.data.connections);
     } catch (error) {
@@ -82,7 +82,7 @@ const connections = () => {
               </Text>
 
               <Text style={{ color: "gray" }}>
-                B.Tech | Computer Science Technology
+                B.Tech | Computer Science Technology   {{/* temp hard coded, fetch user.userDescription */}}
               </Text>
 
               <Text style={{ color: "gray" }}>

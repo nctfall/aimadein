@@ -2,6 +2,8 @@ import { Tabs } from "expo-router";
 import { AntDesign } from "@expo/vector-icons";
 import { Entypo } from "@expo/vector-icons";
 import { Ionicons } from "@expo/vector-icons";
+import Feather from '@expo/vector-icons/Feather';
+//import Entypo from '@expo/vector-icons/Entypo';
 
 export default function Layout() {
   return (
@@ -23,7 +25,7 @@ export default function Layout() {
       <Tabs.Screen
         name="network"
         options={{
-          tabBarLabel: "network",
+          tabBarLabel: "Network",
           tabBarLabelStyle: { color: "#008E97" },
           headerShown: false,
           tabBarIcon: ({ focused }) =>
@@ -34,6 +36,21 @@ export default function Layout() {
             ),
         }}
       />
+<Tabs.Screen
+  name="jobs"
+  options={{
+    tabBarLabel: "Jobs",
+    tabBarLabelStyle: { color: "#008E97" },
+    headerShown: false,
+    tabBarIcon: ({ focused }) =>
+      focused ? (
+        <Entypo name="briefcase" size={24} color="black" />
+      ) : (
+        <Feather name="briefcase" size={24} color="black" />
+      ),
+  }}
+/>
+
       <Tabs.Screen
         name="post"
         options={{

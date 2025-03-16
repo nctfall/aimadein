@@ -2,7 +2,6 @@ import {
   StyleSheet,
   Text,
   View,
-  ScrollView,
   Pressable,
   FlatList,
 } from "react-native";
@@ -20,8 +19,15 @@ const index = () => {
   const [userId, setUserId] = useState("");
   const [user, setUser] = useState();
   const [users, setUsers] = useState([]);
-  const router = useRouter()
+  const router = useRouter();
   const [connectionRequests, setConnectionRequests] = useState([]);
+
+  // Logout function
+  const logout = async () => {
+    await AsyncStorage.removeItem("authToken");
+    router.replace("/(authenticate)/login");
+  };
+
   useEffect(() => {
     const fetchUser = async () => {
       const token = await AsyncStorage.getItem("authToken");
@@ -32,15 +38,17 @@ const index = () => {
 
     fetchUser();
   }, []);
+ 
   useEffect(() => {
     if (userId) {
       fetchUserProfile();
     }
   }, [userId]);
+
   const fetchUserProfile = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:3000/profile/${userId}`
+        `http://192.168.2.34:3000/profile/${userId}`
       );
       const userData = response.data.user;
       setUser(userData);
@@ -48,30 +56,34 @@ const index = () => {
       console.log("error fetching user profile", error);
     }
   };
+
   useEffect(() => {
     if (userId) {
       fetchUsers();
     }
   }, [userId]);
+
   const fetchUsers = async () => {
     axios
-      .get(`http://localhost:3000/users/${userId}`)
+      .get(`http://192.168.2.34:3000/users/${userId}`)
       .then((response) => {
         setUsers(response.data);
       })
       .catch((error) => {
-        console.log(error);
+        console.log("error fetching user profile", error);
       });
   };
+
   useEffect(() => {
     if (userId) {
       fetchFriendRequests();
     }
   }, [userId]);
+
   const fetchFriendRequests = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:3000/connection-request/${userId}`
+        `http://192.168.2.34:3000/connection-request/${userId}`
       );
       if (response.status === 200) {
         const connectionRequestsData = response.data?.map((friendRequest) => ({
@@ -87,11 +99,11 @@ const index = () => {
       console.log("error", error);
     }
   };
-  console.log(connectionRequests);
-  return (
-    <ScrollView style={{ flex: 1, backgroundColor: "white" }}>
-      <Pressable
-      onPress={() => router.push("/network/connections")}
+
+  const renderHeader = () => (
+    <>
+      {/* Top Bar with Logout Button and Texts */}
+      <View
         style={{
           marginTop: 10,
           marginHorizontal: 10,
@@ -100,15 +112,16 @@ const index = () => {
           justifyContent: "space-between",
         }}
       >
-        <Text style={{ fontSize: 16, fontWeight: "600" }}>
-          Manage My Network
-        </Text>
-        <AntDesign name="arrowright" size={22} color="black" />
-      </Pressable>
+        <Text style={{ fontSize: 16, fontWeight: "bold" }}>Manage My Network</Text>
+        <Pressable onPress={logout} style={{ flexDirection: "row", alignItems: "center" }}>
+          <AntDesign name="logout" size={22} color="black" />
+          <Text style={{ marginLeft: 5, fontSize: 16, fontWeight: "500", color: "black" }}>
+            Logout
+          </Text>
+        </Pressable>
+      </View>
 
-      <View
-        style={{ borderColor: "#E0E0E0", borderWidth: 2, marginVertical: 10 }}
-      />
+      <View style={{ borderColor: "#E0E0E0", borderWidth: 2, marginVertical: 10 }} />
 
       <View
         style={{
@@ -123,9 +136,7 @@ const index = () => {
         <AntDesign name="arrowright" size={22} color="black" />
       </View>
 
-      <View
-        style={{ borderColor: "#E0E0E0", borderWidth: 2, marginVertical: 10 }}
-      />
+      <View style={{ borderColor: "#E0E0E0", borderWidth: 2, marginVertical: 10 }} />
 
       <View>
         {connectionRequests?.map((item, index) => (
@@ -152,35 +163,27 @@ const index = () => {
         </View>
 
         <Text>
-          Find and contact the right people. Plus see who's viewed your profile
+          Find and contact the right people. Explore more Job Opportunities
         </Text>
-        <View
-          style={{
-            backgroundColor: "#FFC72C",
-            width: 140,
-            paddingHorizontal: 10,
-            paddingVertical: 5,
-            borderRadius: 25,
-            marginTop: 8,
-          }}
-        >
-          <Text
-            style={{ textAlign: "center", color: "white", fontWeight: "600" }}
-          >
-            Try Premium
-          </Text>
-        </View>
+        
       </View>
-      <FlatList
-        data={users}
-        columnWrapperStyle={{ justifyContent: "space-between" }}
-        numColumns={2}
-        keyExtractor={(item) => item._id}
-        renderItem={({ item, key }) => (
-          <UserProfile userId={userId} item={item} key={index} />
-        )}
-      />
-    </ScrollView>
+    </>
+  );
+
+  const renderUserProfiles = ({ item }) => (
+    <UserProfile userId={userId} item={item} />
+  );
+
+  return (
+    <FlatList
+      ListHeaderComponent={renderHeader}
+      data={users}
+      columnWrapperStyle={{ justifyContent: "space-between" }}
+      numColumns={2}
+      keyExtractor={(item) => item._id}
+      renderItem={renderUserProfiles}
+      contentContainerStyle={{ flexGrow: 1, backgroundColor: "white" }}
+    />
   );
 };
 
