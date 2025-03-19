@@ -108,8 +108,8 @@ const JobDetails = () => {
       setHasApplied(true);
       Alert.alert("Success", applyResponse.data.message);
   
-      // Fetch applicant details (logged-in user) using the new endpoint
-      const applicantResponse = await axios.get(`http://192.168.2.34:3000/user-details/${userId}`);
+      // Fetch applicant details (logged-in user)
+      const applicantResponse = await axios.get(`http://192.168.2.34:3000/users/${userId}`);
       console.log("Applicant Response:", applicantResponse.data);
       const applicantName = applicantResponse.data.name; // Extract the applicant's name
   

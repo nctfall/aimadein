@@ -26,6 +26,13 @@ const Index = () => {
 
   const router = useRouter();
 
+
+    // Logout function
+    const logout = async () => {
+      await AsyncStorage.removeItem("authToken");
+      router.replace("/(authenticate)/login");
+    };
+
   // Fetch User
   useEffect(() => {
     const fetchUser = async () => {
@@ -74,7 +81,13 @@ useEffect(() => {
 
       const response = await axios.get(url);
       console.log("Fetched jobs:", response.data); // Log the API response
-      setJobs(response.data.jobPosts); // Set jobs with the correct key
+
+      // Sort jobs by createdAt in descending order (newest first)
+      const sortedJobs = response.data.jobPosts.sort((a, b) => {
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+
+      setJobs(sortedJobs); // Set sorted jobs
     } catch (error) {
       console.log("Error fetching job posts", error);
       setError("Failed to fetch jobs. Please try again later.");
@@ -152,6 +165,12 @@ useEffect(() => {
             onChangeText={setSearchQuery}
           />
         </Pressable>
+                <Pressable onPress={logout} style={{ flexDirection: "row", alignItems: "center" }}>
+                  <AntDesign name="logout" size={22} color="black" />
+                  <Text style={{ marginLeft: 5, fontSize: 16, fontWeight: "500", color: "black" }}>
+                    Logout
+                  </Text>
+                </Pressable>
       </View>
 
       {/* Jobs List */}

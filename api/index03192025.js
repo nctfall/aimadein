@@ -682,24 +682,6 @@ router.post('/send-email', async (req, res) => {
 });
 
 
-// Fetch a single user by ID (new endpoint)
-app.get("/user-details/:userId", async (req, res) => {
-  try {
-    const userId = req.params.userId;
-
-    // Fetch the user by ID
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // Return the user object
-    res.status(200).json(user);
-  } catch (error) {
-    console.log("Error fetching user:", error);
-    res.status(500).json({ message: "Error 500 Failed to fetch user", error: error.message });
-  }
-});
 
 
 // Export the router

@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from "expo-router"; // Import useRouter
+import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -13,42 +13,32 @@ import {
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import jwt_decode from "jwt-decode";
-import { Feather } from "@expo/vector-icons";
-import * as MailComposer from 'expo-mail-composer'; // Import MailComposer
 
 const JobDetails = () => {
   const { id } = useLocalSearchParams(); // Get the job ID from the URL
-  const router = useRouter(); // Initialize the router
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userType, setUserType] = useState(null); // State to store userType
   const [userId, setUserId] = useState(null); // State to store the logged-in user's ID
   const [applicants, setApplicants] = useState([]); // State to store applicants
   const [hasApplied, setHasApplied] = useState(false); // State to track if user has applied
-  const [connections, setConnections] = useState([]); // State to store connections (initialized as an empty array)
 
-  // Fetch logged-in user's details and connections
+  // Fetch logged-in user's details
   useEffect(() => {
-    const fetchUserDetailsAndConnections = async () => {
+    const fetchUserDetails = async () => {
       try {
         const token = await AsyncStorage.getItem("authToken");
         if (token) {
           const decodedToken = jwt_decode(token);
           setUserType(decodedToken.userType); // Set the userType from the token
           setUserId(decodedToken.userId); // Set the userId from the token
-  
-          // Fetch the logged-in user's connections
-          const response = await axios.get(`http://192.168.2.34:3000/users/${decodedToken.userId}/connections`);
-          console.log("Connections:", response.data.connections); // Log the connections
-          setConnections(response.data.connections || []); // Ensure connections is an array
         }
       } catch (error) {
-        console.log("Error fetching user details or connections", error);
-        Alert.alert("Error", "Failed to fetch connections. Please try again later.");
+        console.log("Error fetching user details", error);
       }
     };
-  
-    fetchUserDetailsAndConnections();
+
+    fetchUserDetails();
   }, []);
 
   // Fetch job details
@@ -57,9 +47,9 @@ const JobDetails = () => {
       try {
         const response = await axios.get(`http://192.168.2.34:3000/jobs/${id}`);
         setJob(response.data.jobPost);
+        console.log("Applicants:", response.data.jobPost.applicants); // Log the applicants
       } catch (error) {
         console.log("Error fetching job details", error);
-        Alert.alert("Error", "Failed to fetch job details. Please try again later.");
       } finally {
         setLoading(false);
       }
@@ -74,10 +64,10 @@ const JobDetails = () => {
       const fetchApplicants = async () => {
         try {
           const response = await axios.get(`http://192.168.2.34:3000/jobs/${id}/applicants`);
+          console.log("Applicants:", response.data.applicants); // Log the applicants
           setApplicants(response.data.applicants);
         } catch (error) {
           console.log("Error fetching applicants", error);
-          Alert.alert("Error", "Failed to fetch applicants. Please try again later.");
         }
       };
 
@@ -101,52 +91,14 @@ const JobDetails = () => {
     }
 
     try {
-      // Apply for the job
-      const applyResponse = await axios.post(`http://192.168.2.34:3000/jobs/${id}/apply`, {
-        userId,
+      const response = await axios.post(`http://192.168.2.34:3000/jobs/${id}/apply`, {
+        userId, // Send the logged-in user's ID
       });
-      setHasApplied(true);
-      Alert.alert("Success", applyResponse.data.message);
-  
-      // Fetch applicant details (logged-in user) using the new endpoint
-      const applicantResponse = await axios.get(`http://192.168.2.34:3000/user-details/${userId}`);
-      console.log("Applicant Response:", applicantResponse.data);
-      const applicantName = applicantResponse.data.name; // Extract the applicant's name
-  
-      // Fetch job details to get the job poster's ObjectId
-      const jobResponse = await axios.get(`http://192.168.2.34:3000/jobs/${id}`);
-      console.log("Job Response:", jobResponse.data);
-      const jobTitle = jobResponse.data.jobPost.jobTitle;
-      const jobPosterId = jobResponse.data.jobPost.user._id; // Extract the job poster's ID
-  
-      // Fetch job poster's details to get their email
-      const jobPosterResponse = await axios.get(`http://192.168.2.34:3000/user-details/${jobPosterId}`); // Use the new endpoint
-      console.log("Job Poster Response:", jobPosterResponse.data);
-      const jobPosterEmail = jobPosterResponse.data.email; // Extract the job poster's email
-  
-      // Log the extracted data
-      console.log("Extracted Data:", {
-        applicantName,
-        jobTitle,
-        jobPosterEmail,
-      });
-  
-      // Check for missing data
-      if (!applicantName || !jobPosterEmail || !jobTitle) {
-        Alert.alert("Error", "Missing required data. Please try again later.");
-        return;
-      }
-  
-      // Send email notification
-      await axios.post(`http://192.168.2.34:3000/send-email`, {
-        to: jobPosterEmail,
-        applicantName: applicantName,
-        jobTitle: jobTitle,
-      });
-      console.log("Email notification sent successfully");
+      setHasApplied(true); // Update the state to reflect that the user has applied
+      Alert.alert("Success", response.data.message); // Show success message
     } catch (error) {
-      console.error("Error applying for job or sending email:", error);
-      Alert.alert("Error", error.response?.data?.message || "Failed to apply for job or send email notification");
+      console.log("Error applying for job", error);
+      Alert.alert("Error", error.response?.data?.message || "Failed to apply for job");
     }
   };
 
@@ -158,36 +110,9 @@ const JobDetails = () => {
         selectedUserId: applicantId, // Applicant to connect with
       });
       Alert.alert("Success", "Connection request sent successfully");
-
-      // Update the connections state to reflect the new connection
-      setConnections((prevConnections) => [...prevConnections, applicantId]);
     } catch (error) {
       console.log("Error sending connection request", error);
       Alert.alert("Error", "Failed to send connection request");
-    }
-  };
-
-  // Handle clicking on an applicant to view their profile
-  const handleApplicantPress = (applicantId) => {
-    router.push(`/jobs/profile-id/${applicantId}`); // Navigate to the applicant's profile page
-  };
-
-  // Handle sending email to a connected user
-  const handleSendEmail = async (email) => {
-    try {
-      const isAvailable = await MailComposer.isAvailableAsync();
-      if (isAvailable) {
-        await MailComposer.composeAsync({
-          recipients: [email], // Pre-fill the recipient's email address
-          subject: 'Regarding Job Application', // Pre-fill the subject
-          body: 'Hello,', // Pre-fill the body
-        });
-      } else {
-        Alert.alert("Error", "Email services are not available on this device.");
-      }
-    } catch (error) {
-      console.log("Error sending email", error);
-      Alert.alert("Error", "Failed to send email. Please try again later.");
     }
   };
 
@@ -208,7 +133,7 @@ const JobDetails = () => {
           <TouchableOpacity
             style={[
               styles.applyButton,
-              hasApplied && styles.appliedButton, // Apply different style if user has applied
+              hasApplied && styles.appliedButton // Apply different style if user has applied
             ]}
             onPress={handleApply}
             disabled={hasApplied} // Disable the button if user has applied
@@ -257,39 +182,21 @@ const JobDetails = () => {
           <Text style={styles.sectionHeading}>
             Applicants: {applicants.length}
           </Text>
-          {applicants.map((applicant) => {
-            // Ensure connections is an array before calling .some()
-            const isConnected = Array.isArray(connections) && connections.some((conn) => conn.toString() === applicant._id.toString());
-            return (
+          {applicants.map((applicant) => (
+            <View key={applicant._id} style={styles.applicantCard}>
+              <Image
+                style={styles.applicantImage}
+                source={{ uri: applicant.profileImage }}
+              />
+              <Text style={styles.applicantName}>{applicant.name}</Text>
               <TouchableOpacity
-                key={applicant._id}
-                style={styles.applicantCard}
-                onPress={() => handleApplicantPress(applicant._id)} // Navigate to applicant's profile
+                style={styles.connectButton}
+                onPress={() => handleConnect(applicant._id)}
               >
-                <Image
-                  style={styles.applicantImage}
-                  source={{ uri: applicant.profileImage }}
-                />
-                <Text style={styles.applicantName}>{applicant.name}</Text>
-                {isConnected ? ( // Check if applicant is already connected
-                  <TouchableOpacity
-                    style={styles.mailButton}
-                    onPress={() => handleSendEmail(applicant.email)} // Open email client
-                  >
-                    <Feather name="mail" size={24} color="#007AFF" />
-                    <Text style={styles.connectedText}>Send Email</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.connectButton}
-                    onPress={() => handleConnect(applicant._id)}
-                  >
-                    <Text style={styles.connectButtonText}>Connect</Text>
-                  </TouchableOpacity>
-                )}
+                <Text style={styles.connectButtonText}>Connect</Text>
               </TouchableOpacity>
-            );
-          })}
+            </View>
+          ))}
         </View>
       )}
 
@@ -298,7 +205,7 @@ const JobDetails = () => {
         <TouchableOpacity
           style={[
             styles.bottomApplyButton,
-            hasApplied && styles.appliedButton, // Apply different style if user has applied
+            hasApplied && styles.appliedButton // Apply different style if user has applied
           ]}
           onPress={handleApply}
           disabled={hasApplied} // Disable the button if user has applied
@@ -433,21 +340,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
-  mailButton: {
-    flexDirection: "row", // Ensure icon and text are in the same line
-    alignItems: "center", // Vertically align icon and text
-    paddingHorizontal: 10, // Add some padding for better spacing
-    paddingVertical: 5, // Add some padding for better spacing
-    borderRadius: 5, // Optional: Add rounded corners
-    backgroundColor: "#F0F0F0", // Optional: Add a light background color
-  },
-  connectedText: {
-    color: "#666666", // Gray text color
-    fontSize: 14,
-    fontWeight: "600",
-    marginLeft: 8, // Add some spacing between the icon and text
-  },
-
   bottomApplyButton: {
     backgroundColor: "#007AFF",
     paddingVertical: 15,
