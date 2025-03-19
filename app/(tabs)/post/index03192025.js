@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
+import { Entypo } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import jwt_decode from "jwt-decode";
 import * as ImagePicker from "expo-image-picker";
@@ -91,26 +92,10 @@ const index = () => {
 
       console.log("post created", response.data);
       if (response.status === 201) {
-
-       // Show success alert
-      Alert.alert("Success", "Post created successfully!");
-
-      // Clear input fields
-      if (userType === "employee") {
-        setDescription("");
-        setImage("");
-      } else if (userType === "company") {
-        setJobTitle("");
-        setJobDescription("");
-        setSkills("");
-        setSalary("");
-      }
         router.replace("/(tabs)/home");
       }
     } catch (error) {
       console.log("error creating post", error);
-      // Show error alert
-      Alert.alert("Error", "Failed to create post. Please try again.");
     }
   };
 

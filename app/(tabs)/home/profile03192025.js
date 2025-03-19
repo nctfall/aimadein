@@ -93,34 +93,22 @@ const Profile = () => {
 
   const handleSaveDescription = async () => {
     try {
-      let payload;
-      if (userType === 'company') {
-        payload = {
-          userDescription,
-          address,
-        };
-      } else if (userType === 'employee') {
-        payload = {
-          userDescription,
-          skills: skills.split(",").map((skill) => skill.trim()),
-          workExperience,
-          address,
-          education: education.map(item => ({
-            ...item,
-            yearOfGraduation: item.yearOfGraduation ? parseInt(item.yearOfGraduation, 10) : null,
-          })),
-        };
-      } else {
-        throw new Error("Invalid user type");
-      }
-  
-      console.log("Payload:", JSON.stringify(payload, null, 2)); // Log the payload
-  
+      const payload = {
+        userDescription,
+        skills: skills.split(",").map((skill) => skill.trim()),
+        workExperience,
+        address,
+        education: education.map(item => ({
+          ...item,
+          yearOfGraduation: item.yearOfGraduation ? parseInt(item.yearOfGraduation, 10) : null,
+        })),
+      };
+
       const response = await axios.put(
         `http://192.168.2.34:3000/profile/${userId}`,
         payload
       );
-  
+
       if (response.status === 200) {
         await fetchUserProfile();
         setIsEditing(false);

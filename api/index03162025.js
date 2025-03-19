@@ -3,8 +3,6 @@ const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
-const router = express.Router();
-
 
 const app = express();
 const port = 3000;
@@ -347,7 +345,7 @@ app.get("/jobs/:id/applicants", async (req, res) => {
     const { id } = req.params; // Job ID
 
     // Find the job post and populate the applicants field
-    const jobPost = await PostJob.findById(id).populate("applicants", "name profileImage email");
+    const jobPost = await PostJob.findById(id).populate("applicants", "name profileImage");
 
     if (!jobPost) {
       return res.status(404).json({ message: "Job post not found" });
@@ -505,30 +503,16 @@ app.get("/jobs/:id", async (req, res) => {
 app.put("/profile/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
-    const { userDescription, skills, workExperience, education, address, userType } = req.body;
-
-    console.log("Received Payload:", JSON.stringify(req.body, null, 2)); // Log the received payload
+    const { userDescription, skills, workExperience, education, address } = req.body;
 
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Update fields based on userType
-    if (user.userType === 'company') {
-      // Only update userDescription and address for companies
-      user.userDescription = userDescription || user.userDescription;
-      if (address) {
-        user.address = {
-          street: address.street || user.address?.street,
-          city: address.city || user.address?.city,
-          state: address.state || user.address?.state,
-          zipcode: address.zipcode || user.address?.zipcode,
-          country: address.country || user.address?.country,
-        };
-      }
-    } else if (user.userType === 'employee') {
-      // Update all fields for employees
+    // Only allow updates for 'employee' user type
+    if (user.userType === 'employee') {
+      // Update user fields
       user.userDescription = userDescription || user.userDescription;
       user.skills = skills || user.skills;
 
@@ -556,152 +540,15 @@ app.put("/profile/:userId", async (req, res) => {
           country: address.country || user.address?.country,
         };
       }
-    } else {
-      return res.status(400).json({ message: "Invalid user type" });
-    }
 
-    await user.save();
-    res.status(200).json({ message: "Profile updated successfully", user });
+      await user.save();
+      res.status(200).json({ message: "Profile updated successfully", user });
+    } else {
+      res.status(400).json({ message: "Only employees can update these fields" });
+    }
   } catch (error) {
     console.log("Error updating user profile", error);
     res.status(500).json({ message: "Error updating user profile" });
   }
-});
-
-
-
-// Endpoint to check if a user has applied for a job
-app.post("/jobs/:id/apply", async (req, res) => {
-  try {
-    const { id } = req.params; // Job ID
-    const { userId } = req.body; // Applicant's user ID
-
-    // Find the job post
-    const jobPost = await PostJob.findById(id);
-    if (!jobPost) {
-      return res.status(404).json({ message: "Job post not found" });
-    }
-
-    // Check if the user has already applied
-    if (jobPost.applicants.includes(userId)) {
-      return res.status(400).json({ message: "You have already applied for this job" });
-    }
-
-    // Add the applicant's user ID to the applicants array
-    jobPost.applicants.push(userId);
-    await jobPost.save();
-
-    res.status(200).json({ message: "Application submitted successfully" });
-  } catch (error) {
-    console.log("Error applying for job", error);
-    res.status(500).json({ message: "Error applying for job" });
-  }
-});
-
-
-// Endpoint to fetch the logged-in user's connections
-router.get("/users/:userId/connections", async (req, res) => {
-  try {
-    const loggedInUserId = req.params.userId;
-
-    // Fetch the logged-in user's connections
-    const loggedInUser = await User.findById(loggedInUserId).populate(
-      "connections",
-      "_id"
-    );
-
-    if (!loggedInUser) {
-      return res.status(400).json({ message: "User not found" });
-    }
-
-    // Get the IDs of the connected users
-    const connectedUserIds = loggedInUser.connections.map(
-      (connection) => connection._id
-    );
-
-    // Return the connections array
-    res.status(200).json({ connections: connectedUserIds });
-  } catch (error) {
-    console.log("Error retrieving user connections", error);
-    res.status(500).json({ message: "Error retrieving user connections" });
-  }
-});
-
-
-
-//notification email transporter 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: "aaimadein@gmail.com",
-    pass: "lhihnowtyknczwck",
-  },
-});
-
-
-// Function to send job application email
-const sendJobApplicationEmail = async (to, applicantName, jobTitle) => {
-  const mailOptions = {
-    from: "aaimadein@gmail.com",
-    to: to,
-    subject: "New Job Application",
-    text: `${applicantName} has applied for the job titled "${jobTitle}".`,
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log("Job application email sent successfully");
-  } catch (error) {
-    console.error("Error sending job application email:", error);
-    throw error; // Re-throw the error to handle it in the calling function
-  }
-};
-
-// Endpoint to handle email sending
-router.post('/send-email', async (req, res) => {
-  const { to, applicantName, jobTitle } = req.body;
-
-  if (!to || !applicantName || !jobTitle) {
-    return res.status(400).json({ message: "Missing required fields" });
-  }
-
-  const mailOptions = {
-    from: "aaimadein@gmail.com",
-    to: to,
-    subject: "New Job Application",
-    text: `${applicantName} has applied for the job titled "${jobTitle}".`,
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-    res.status(200).json({ message: "Email sent successfully" });
-  } catch (error) {
-    console.error("Error sending email:", error);
-    res.status(500).json({ message: "Failed to send email", error: error.message });
-  }
-});
-
-
-// Fetch a single user by ID (new endpoint)
-app.get("/user-details/:userId", async (req, res) => {
-  try {
-    const userId = req.params.userId;
-
-    // Fetch the user by ID
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // Return the user object
-    res.status(200).json(user);
-  } catch (error) {
-    console.log("Error fetching user:", error);
-    res.status(500).json({ message: "Error 500 Failed to fetch user", error: error.message });
-  }
-});
-
-
-// Export the router
-module.exports = router;
-app.use(router);
+}
+);

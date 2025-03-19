@@ -29,6 +29,13 @@ const UserProfileImage = ({ uri, onPress }) => (
   </Pressable>
 );
 
+ 
+  // Logout function
+  const logout = async () => {
+    await AsyncStorage.removeItem("authToken");
+    router.replace("/(authenticate)/login");
+  };
+
 const PostHeader = ({ user, createdAt }) => (
   <View style={styles.postHeader}>
     <UserProfileImage uri={user?.profileImage} />
@@ -181,6 +188,12 @@ const HomeScreen = () => {
             style={styles.searchInput}
           />
         </View>
+         <Pressable onPress={logout} style={{ flexDirection: "row", alignItems: "center" }}>
+            <AntDesign name="logout" size={22} color="black" />
+             <Text style={{ marginLeft: 5, fontSize: 16, fontWeight: "500", color: "black" }}>
+              Logout
+             </Text>
+          </Pressable>
       </View>
 
       {filteredPosts.map((post, index) => (
